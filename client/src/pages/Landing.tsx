@@ -5,7 +5,7 @@ import { Sparkles, Wand2, Cloud, Zap, Code, Lock } from "lucide-react";
 
 export default function Landing() {
   const handleSignIn = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/auth/replit";
   };
 
   const handleTryFormatters = () => {

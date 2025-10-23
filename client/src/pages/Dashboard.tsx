@@ -278,7 +278,7 @@ export default function Dashboard() {
   };
 
   const handleSignIn = () => {
-    setLocation("/login");
+    window.location.href = "/auth/replit";
   };
 
   // Determine which items to display and filter
