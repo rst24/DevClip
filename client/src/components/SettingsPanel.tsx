@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { PlanBadge } from "./PlanBadge";
 import { 
   Settings, 
@@ -12,6 +13,7 @@ import {
   Shield, 
   Database,
   ExternalLink,
+  Cloud,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -20,9 +22,12 @@ import { useState } from "react";
 interface SettingsPanelProps {
   user: {
     email: string;
-    username: string;
     plan: "free" | "pro" | "team";
-    aiCredits: number;
+    aiCreditsBalance: number;
+    aiCreditsUsed?: number;
+    creditCarryover?: number;
+    firstName?: string;
+    lastName?: string;
   };
   onUpgrade: () => void;
   onManageBilling: () => void;
@@ -56,12 +61,14 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
             </div>
           </div>
 
-          <div>
-            <Label className="text-sm text-muted-foreground">Username</Label>
-            <div className="text-sm font-medium mt-1" data-testid="text-user-username">
-              {user.username}
+          {(user.firstName || user.lastName) && (
+            <div>
+              <Label className="text-sm text-muted-foreground">Name</Label>
+              <div className="text-sm font-medium mt-1" data-testid="text-user-name">
+                {[user.firstName, user.lastName].filter(Boolean).join(' ')}
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <Label className="text-sm text-muted-foreground">Plan</Label>
@@ -80,18 +87,87 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
         </div>
 
         <div className="space-y-4">
+          {/* Monthly Allocation */}
+          <div>
+            <div className="text-sm text-muted-foreground mb-1">Monthly Allocation</div>
+            <div className="text-sm font-medium" data-testid="text-monthly-allocation">
+              {user.plan === "free" ? "50 credits" : 
+               user.plan === "pro" ? "5,000 credits" :
+               "25,000 credits"}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Current Balance */}
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium">AI Credits</div>
-              <div className="text-sm text-muted-foreground">
-                {user.plan === "free" ? "10/month on Free plan" : 
-                 user.plan === "pro" ? "250/month on Pro plan" :
-                 "2000/month on Team plan"}
+              <div className="text-sm font-medium">Current Balance</div>
+              <div className="text-xs text-muted-foreground">
+                Available credits
               </div>
             </div>
-            <Badge variant="outline" data-testid="text-credits-remaining">
-              {user.aiCredits} remaining
+            <Badge variant="outline" data-testid="text-credits-balance">
+              {user.aiCreditsBalance.toLocaleString()} credits
             </Badge>
+          </div>
+
+          {/* Credits Used This Month */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Used This Month</div>
+              <div className="text-xs text-muted-foreground">
+                Credits consumed
+              </div>
+            </div>
+            <Badge variant="secondary" data-testid="text-credits-used">
+              {(user.aiCreditsUsed || 0).toLocaleString()} credits
+            </Badge>
+          </div>
+
+          {/* Carryover Credits (Pro/Team only) */}
+          {user.plan !== "free" && user.creditCarryover !== undefined && user.creditCarryover > 0 && (
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Carryover Credits</div>
+                <div className="text-xs text-muted-foreground">
+                  From previous month
+                </div>
+              </div>
+              <Badge variant="outline" data-testid="text-credits-carryover">
+                {user.creditCarryover.toLocaleString()} credits
+              </Badge>
+            </div>
+          )}
+
+          {/* Usage Progress */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-muted-foreground">Usage</div>
+              <div className="text-xs text-muted-foreground" data-testid="text-usage-percentage">
+                {(() => {
+                  const monthlyAllocation = user.plan === "free" ? 50 : user.plan === "pro" ? 5000 : 25000;
+                  const usedCredits = user.aiCreditsUsed || 0;
+                  const percentage = Math.min(100, Math.round((usedCredits / monthlyAllocation) * 100));
+                  return `${percentage}%`;
+                })()}
+              </div>
+            </div>
+            <Progress 
+              value={(() => {
+                const monthlyAllocation = user.plan === "free" ? 50 : user.plan === "pro" ? 5000 : 25000;
+                const usedCredits = user.aiCreditsUsed || 0;
+                return Math.min(100, (usedCredits / monthlyAllocation) * 100);
+              })()} 
+              data-testid="progress-credit-usage"
+            />
+          </div>
+
+          {/* Credit Cost Information */}
+          <div className="rounded-md bg-muted p-3">
+            <div className="text-xs text-muted-foreground">
+              AI actions cost 1-3 credits based on complexity
+            </div>
           </div>
 
           <Separator />
@@ -178,14 +254,14 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
           </div>
           
           <div className="flex items-center gap-2 text-sm">
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <Cloud className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">
-              Clipboard history stored in IndexedDB (local)
+              Clipboard history synced securely to the cloud
             </span>
           </div>
 
           <Button variant="outline" size="sm" className="mt-2" data-testid="button-clear-history">
-            Clear Local History
+            Clear History
           </Button>
         </div>
       </Card>

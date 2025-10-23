@@ -221,15 +221,15 @@ export default function Dashboard() {
     }
   };
 
-  const handleUpgrade = async (plan: "pro" | "team") => {
+  const handleUpgrade = async (plan: "pro" | "team", billingInterval: "month" | "year") => {
     try {
       setUpgradeModalOpen(false);
       toast({
         title: "Redirecting to checkout",
-        description: `Opening Stripe checkout for ${plan} plan...`,
+        description: `Opening Stripe checkout for ${plan} plan (${billingInterval === "year" ? "annual" : "monthly"})...`,
       });
       
-      const res = await apiRequest("/api/billing/create-subscription", "POST", { plan });
+      const res = await apiRequest("/api/billing/create-subscription", "POST", { plan, billingInterval });
       const data = await res.json();
       
       if (data.url) {

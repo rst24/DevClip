@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,24 +8,29 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Users, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UpgradeModalProps {
   open: boolean;
   onClose: () => void;
-  onSelectPlan: (plan: "pro" | "team") => void;
+  onSelectPlan: (plan: "pro" | "team", billingInterval: "month" | "year") => void;
 }
+
+type BillingInterval = "month" | "year";
 
 const plans = [
   {
     id: "pro",
     name: "Pro",
-    price: 10,
+    monthlyPrice: 10,
+    annualPrice: 100,
     icon: Crown,
     description: "Perfect for individual developers",
     features: [
-      "250 AI credits/month",
+      "5,000 AI credits/month",
+      "Credit carryover (up to 10,000)",
       "Code explanation & refactoring",
       "Log summarization",
       "Cloud clipboard sync",
@@ -36,11 +42,13 @@ const plans = [
   {
     id: "team",
     name: "Team",
-    price: 49,
+    monthlyPrice: 49,
+    annualPrice: 490,
     icon: Users,
     description: "For development teams",
     features: [
-      "2000 AI credits/month",
+      "25,000 AI credits/month",
+      "Credit carryover (up to 50,000)",
       "Shared snippet library",
       "Team workspace",
       "Usage analytics",
@@ -52,13 +60,23 @@ const plans = [
 ];
 
 const freeFeatures = [
-  "10 AI credits/month",
+  "50 AI credits/month",
   "Local clipboard history",
   "All formatters (JSON, YAML, SQL, etc.)",
   "Privacy-first design",
 ];
 
 export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps) {
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("month");
+
+  const getPrice = (plan: typeof plans[0]) => {
+    return billingInterval === "month" ? plan.monthlyPrice : plan.annualPrice;
+  };
+
+  const getSavings = (plan: typeof plans[0]) => {
+    return plan.monthlyPrice * 12 - plan.annualPrice;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-upgrade">
@@ -71,6 +89,33 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
             Unlock AI-powered code tools and cloud sync
           </DialogDescription>
         </DialogHeader>
+
+        {/* Billing Interval Toggle */}
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Button
+            variant={billingInterval === "month" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setBillingInterval("month")}
+            data-testid="button-billing-monthly"
+            className="min-w-24"
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={billingInterval === "year" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setBillingInterval("year")}
+            data-testid="button-billing-annual"
+            className="min-w-24"
+          >
+            Annual
+          </Button>
+          {billingInterval === "year" && (
+            <Badge variant="default" className="ml-2" data-testid="badge-annual-savings">
+              Save up to $98/year
+            </Badge>
+          )}
+        </div>
 
         <div className="grid md:grid-cols-3 gap-4 mt-4">
           {/* Free Plan */}
@@ -103,6 +148,9 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
           {/* Pro & Team Plans */}
           {plans.map((plan) => {
             const Icon = plan.icon;
+            const price = getPrice(plan);
+            const savings = getSavings(plan);
+            
             return (
               <Card
                 key={plan.id}
@@ -124,8 +172,24 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
                     <Icon className="h-5 w-5 text-primary" />
                     <div className="text-lg font-semibold">{plan.name}</div>
                   </div>
-                  <div className="text-3xl font-bold mb-1">${plan.price}</div>
-                  <div className="text-sm text-muted-foreground mb-2">per month</div>
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-3xl font-bold">${price}</div>
+                    {billingInterval === "year" && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs"
+                        data-testid={`badge-savings-${plan.id}`}
+                      >
+                        Save ${savings}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground mb-2">
+                    per {billingInterval}
+                    {billingInterval === "year" && (
+                      <span className="ml-1 text-xs">(${(price / 12).toFixed(2)}/mo)</span>
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">{plan.description}</div>
                 </div>
 
@@ -141,7 +205,7 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
                 <Button
                   variant={plan.popular ? "default" : "outline"}
                   className="w-full"
-                  onClick={() => onSelectPlan(plan.id as "pro" | "team")}
+                  onClick={() => onSelectPlan(plan.id as "pro" | "team", billingInterval)}
                   data-testid={`button-plan-${plan.id}`}
                 >
                   Upgrade to {plan.name}
