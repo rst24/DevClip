@@ -45,7 +45,7 @@ export default function Dashboard() {
   // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("PUT", `/api/history/${id}/favorite`, {});
+      const res = await apiRequest(`/api/history/${id}/favorite`, "PUT", {});
       return res.json();
     },
     onSuccess: () => {
@@ -56,7 +56,7 @@ export default function Dashboard() {
   // Create clipboard item mutation
   const createClipboardMutation = useMutation({
     mutationFn: async (data: { content: string; contentType: string; formatted: boolean }) => {
-      const res = await apiRequest("POST", "/api/history", data);
+      const res = await apiRequest("/api/history", "POST", data);
       return res.json();
     },
     onSuccess: () => {
@@ -79,7 +79,7 @@ export default function Dashboard() {
   // Feedback mutation
   const feedbackMutation = useMutation({
     mutationFn: async ({ rating, message }: { rating: number; message: string }) => {
-      const res = await apiRequest("POST", "/api/feedback", { rating, message, userId: user?.id });
+      const res = await apiRequest("/api/feedback", "POST", { rating, message, userId: user?.id });
       return res.json();
     },
   });
@@ -151,7 +151,7 @@ export default function Dashboard() {
 
   const handleManageBilling = async () => {
     try {
-      const res = await apiRequest("POST", "/api/billing/portal", {});
+      const res = await apiRequest("/api/billing/portal", "POST", {});
       const data = await res.json();
       window.open(data.url, '_blank');
     } catch (error) {
