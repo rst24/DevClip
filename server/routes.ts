@@ -29,6 +29,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
 
+// Stripe Price IDs
+const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
+const STRIPE_TEAM_PRICE_ID = process.env.STRIPE_TEAM_PRICE_ID;
+
+if (!STRIPE_PRO_PRICE_ID || !STRIPE_TEAM_PRICE_ID) {
+  throw new Error('Missing Stripe price IDs: STRIPE_PRO_PRICE_ID and STRIPE_TEAM_PRICE_ID required');
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // CORS middleware for browser extension
@@ -331,10 +339,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId = customer.id;
       }
       
-      // Price IDs (in production, these would be from Stripe dashboard)
+      // Get price ID based on plan
       const priceIds: Record<string, string> = {
-        pro: "price_pro_monthly", // Placeholder - would be real Stripe price ID
-        team: "price_team_monthly",
+        pro: STRIPE_PRO_PRICE_ID!,
+        team: STRIPE_TEAM_PRICE_ID!,
       };
       
       const priceId = priceIds[data.plan];
@@ -342,33 +350,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid plan" });
       }
       
-      // Create subscription
-      const subscription = await stripe.subscriptions.create({
+      // Construct base URL for redirects
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : 'http://localhost:5000';
+      
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
         customer: customerId,
-        items: [{ price: priceId }],
-        payment_behavior: 'default_incomplete',
-        expand: ['latest_invoice.payment_intent'],
+        mode: "subscription",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        success_url: `${baseUrl}/?success=true`,
+        cancel_url: `${baseUrl}/?canceled=true`,
+        metadata: {
+          userId: user.id,
+          plan: data.plan,
+        },
       });
       
-      // Update user in storage
-      await storage.updateUserPlan(
-        userId,
-        data.plan,
-        customerId,
-        subscription.id
-      );
-      
-      const invoice = subscription.latest_invoice as any;
-      const clientSecret = invoice?.payment_intent?.client_secret;
+      // Update user with customer ID (subscription will be updated via webhook)
+      await storage.updateUserPlan(userId, user.plan, customerId);
       
       res.json({
-        subscriptionId: subscription.id,
-        clientSecret,
+        sessionId: session.id,
+        url: session.url,
       });
       
     } catch (error: any) {
       console.error("Subscription creation error:", error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Stripe webhook handler (must be BEFORE body parsing middleware)
+  app.post("/api/webhooks/stripe", async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    
+    if (!sig) {
+      return res.status(400).send('Missing stripe-signature header');
+    }
+
+    let event;
+    
+    try {
+      // Verify webhook signature
+      event = stripe.webhooks.constructEvent(
+        req.rawBody,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET || ''
+      );
+    } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      // Handle the event
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as any;
+          const userId = session.metadata?.userId;
+          const plan = session.metadata?.plan;
+          
+          if (userId && plan) {
+            await storage.updateUserPlan(
+              userId,
+              plan,
+              session.customer as string,
+              session.subscription as string
+            );
+            console.log(`✓ Subscription activated for user ${userId}: ${plan}`);
+          }
+          break;
+        }
+
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as any;
+          const customerId = subscription.customer as string;
+          const user = await storage.getUserByStripeCustomerId(customerId);
+          
+          if (user) {
+            // Subscription status changed - could be active, past_due, cancelled, etc.
+            console.log(`✓ Subscription updated for user ${user.id}: ${subscription.status}`);
+          }
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as any;
+          const customerId = subscription.customer as string;
+          const user = await storage.getUserByStripeCustomerId(customerId);
+          
+          if (user) {
+            // Downgrade to free plan when subscription is cancelled
+            await storage.updateUserPlan(user.id, 'free');
+            console.log(`✓ User ${user.id} downgraded to free plan`);
+          }
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object as any;
+          const customerId = invoice.customer as string;
+          
+          console.log(`Payment failed for customer ${customerId}`);
+          // In production: send email, retry payment, or suspend account
+          break;
+        }
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook handler error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 

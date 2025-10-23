@@ -6,6 +6,11 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
+// Require SESSION_SECRET in all environments
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required');
+}
+
 const MemoryStore = createMemoryStore(session);
 
 app.use(
@@ -13,7 +18,7 @@ app.use(
     store: new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     }),
-    secret: process.env.SESSION_SECRET || "devclip-secret-change-in-production",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {

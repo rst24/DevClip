@@ -125,13 +125,28 @@ export default function Dashboard() {
     }
   };
 
-  const handleUpgrade = (plan: "pro" | "team") => {
-    toast({
-      title: "Upgrade selected",
-      description: `Redirecting to Stripe checkout for ${plan} plan...`,
-    });
-    // In a full implementation, this would create a Stripe checkout session
-    setUpgradeModalOpen(false);
+  const handleUpgrade = async (plan: "pro" | "team") => {
+    try {
+      setUpgradeModalOpen(false);
+      toast({
+        title: "Redirecting to checkout",
+        description: `Opening Stripe checkout for ${plan} plan...`,
+      });
+      
+      const res = await apiRequest("/api/billing/create-subscription", "POST", { plan });
+      const data = await res.json();
+      
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start checkout. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleManageBilling = async () => {
