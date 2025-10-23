@@ -16,10 +16,9 @@ import {
   createSubscriptionSchema,
   insertClipboardItemSchema,
   insertFeedbackSchema,
-  loginSchema,
-  signupSchema,
+  migrateLocalDataSchema,
 } from "@shared/schema";
-import { comparePassword } from "./auth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -38,6 +37,8 @@ if (!STRIPE_PRO_PRICE_ID || !STRIPE_TEAM_PRICE_ID) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup Replit Auth
+  await setupAuth(app);
   
   // CORS middleware for browser extension
   app.use((req, res, next) => {
@@ -56,99 +57,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== AUTH ROUTES ==========
-  app.post("/api/auth/signup", async (req, res) => {
+  // Replit Auth routes are handled by replitAuth.ts
+  // /api/login, /api/callback, /api/logout
+  
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const data = signupSchema.parse(req.body);
-      
-      // Check if user already exists
-      const existingEmail = await storage.getUserByEmail(data.email);
-      if (existingEmail) {
-        return res.status(400).json({ message: "Email already registered" });
-      }
-      
-      const existingUsername = await storage.getUserByUsername(data.username);
-      if (existingUsername) {
-        return res.status(400).json({ message: "Username already taken" });
-      }
-      
-      // Create user
-      const user = await storage.createUser(data);
-      
-      // Set session
-      req.session.userId = user.id;
-      
-      // Don't send password to client
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  // Migrate localStorage data to database after login
+  app.post("/api/migrate-local-data", isAuthenticated, async (req: any, res) => {
     try {
-      const data = loginSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      const data = migrateLocalDataSchema.parse(req.body);
       
-      // Find user
-      const user = await storage.getUserByEmail(data.email);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
+      // Migrate clipboard items
+      const itemsToCreate = data.clipboardItems.map(item => ({
+        userId,
+        content: item.content,
+        contentType: item.contentType,
+        formatted: item.formatted,
+        favorite: item.favorite || false,
+      }));
       
-      // Check password
-      const isValid = await comparePassword(data.password, user.password);
-      if (!isValid) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
+      const createdItems = await storage.createClipboardItemsBulk(itemsToCreate);
       
-      // Set session
-      req.session.userId = user.id;
-      
-      // Don't send password to client
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({ 
+        message: "Data migrated successfully",
+        itemsCreated: createdItems.length 
+      });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error("Error migrating data:", error);
+      res.status(500).json({ message: "Failed to migrate data" });
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-
-  app.get("/api/auth/me", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    try {
-      const user = await storage.getUser(req.session.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Don't send password to client
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Authentication middleware
-  function requireAuth(req: any, res: any, next: any) {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    next();
-  }
-
-  // ========== FORMAT ROUTES ==========
+  // ========== FORMAT ROUTES (No auth required - runs locally) ==========
   app.post("/api/format", async (req, res) => {
     try {
       const data = formatRequestSchema.parse(req.body);
@@ -180,121 +130,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== AI ROUTES ==========
-  app.post("/api/v1/ai/process", requireAuth, async (req, res) => {
+  // ========== AI ROUTES (Requires auth + credits) ==========
+  app.post("/api/v1/ai/process", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const data = aiRequestSchema.parse(req.body);
-      const userId = req.session.userId!;
       
-      // Get user and check credits
+      // Check user credits
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      if (user.plan === "free") {
-        return res.status(403).json({ message: "AI features require Pro or Team plan" });
-      }
-      
-      // Credit costs per operation
+      // Calculate credit cost based on operation
       const creditCosts: Record<string, number> = {
-        explain: 2,
-        refactor: 3,
+        explain: 1,
         summarize: 2,
+        refactor: 3,
       };
+      const creditsRequired = creditCosts[data.operation] || 1;
       
-      const cost = creditCosts[data.operation] || 2;
-      if (user.aiCredits < cost) {
-        return res.status(403).json({ 
-          message: `Insufficient credits. Need ${cost}, have ${user.aiCredits}` 
+      if (user.aiCreditsBalance < creditsRequired) {
+        return res.status(402).json({ 
+          message: "Insufficient credits",
+          creditsRequired,
+          creditsBalance: user.aiCreditsBalance,
+          upgradeUrl: "/upgrade"
         });
       }
       
-      // Build prompt based on operation
-      let systemPrompt = "";
-      let userPrompt = "";
-      
-      switch (data.operation) {
-        case "explain":
-          systemPrompt = "You are a code explanation expert. Provide clear, concise explanations of code functionality.";
-          userPrompt = `Explain this code in simple terms:\n\n${data.text}`;
-          break;
-        case "refactor":
-          systemPrompt = "You are a code refactoring expert. Suggest improvements for code quality, readability, and performance.";
-          userPrompt = `Suggest refactoring improvements for this code:\n\n${data.text}`;
-          break;
-        case "summarize":
-          systemPrompt = "You are a log analysis expert. Summarize logs, highlighting errors, warnings, and key events.";
-          userPrompt = `Summarize these logs:\n\n${data.text}`;
-          break;
-      }
-      
       // Call OpenAI
+      const systemPrompts: Record<string, string> = {
+        explain: "You are a helpful code assistant. Explain the following code or text clearly and concisely.",
+        summarize: "You are a helpful assistant. Summarize the following text in a clear and concise way.",
+        refactor: "You are an expert code reviewer. Suggest improvements and refactor the following code. Provide clean, optimized code."
+      };
+      
       const completion = await openai.chat.completions.create({
         model: AI_MODEL,
+        max_tokens: MAX_TOKENS,
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "system", content: systemPrompts[data.operation] },
+          { role: "user", content: data.text }
         ],
-        max_completion_tokens: MAX_TOKENS,
       });
       
-      const result = completion.choices[0]?.message?.content || "No response generated";
+      const result = completion.choices[0]?.message?.content || "No result";
       const tokensUsed = completion.usage?.total_tokens || 0;
       
+      // Estimate cost (rough: $0.002-$0.006 per operation)
+      const estimatedCostCents = Math.ceil(tokensUsed * 0.00001 * 100); // Convert to cents
+      
       // Deduct credits
-      await storage.updateUserCredits(userId, user.aiCredits - cost);
+      await storage.deductCredits(userId, creditsRequired);
       
       // Log AI operation
       await storage.createAiOperation({
         userId,
         operationType: data.operation,
-        inputText: data.text.substring(0, 1000), // Store truncated version
-        outputText: result.substring(0, 1000),
+        inputText: data.text,
+        outputText: result,
         tokensUsed,
+        creditsUsed: creditsRequired,
+        estimatedCost: estimatedCostCents,
       });
       
-      res.json({ 
-        result, 
-        creditsUsed: cost, 
-        creditsRemaining: user.aiCredits - cost 
-      });
-      
+      res.json({ result, creditsUsed: creditsRequired });
     } catch (error: any) {
+      if (error.message === "Insufficient credits") {
+        return res.status(402).json({ message: error.message });
+      }
       console.error("AI processing error:", error);
-      res.status(500).json({ message: error.message || "AI processing failed" });
+      res.status(500).json({ message: "Failed to process AI request" });
     }
   });
 
-  // ========== CLIPBOARD ROUTES ==========
-  app.get("/api/history", requireAuth, async (req, res) => {
+  // ========== CLIPBOARD HISTORY ROUTES (Requires auth) ==========
+  app.get("/api/history", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.session.userId!;
+      const userId = req.user.claims.sub;
       const limit = parseInt(req.query.limit as string) || 50;
-      
       const items = await storage.getClipboardItems(userId, limit);
       res.json(items);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("Error fetching history:", error);
+      res.status(500).json({ message: "Failed to fetch clipboard history" });
     }
   });
 
-  app.post("/api/history", requireAuth, async (req, res) => {
+  app.post("/api/history", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.session.userId!;
-      const data = insertClipboardItemSchema.parse({
-        ...req.body,
+      const userId = req.user.claims.sub;
+      const data = insertClipboardItemSchema.parse(req.body);
+      
+      const item = await storage.createClipboardItem({
+        ...data,
         userId,
       });
       
-      const item = await storage.createClipboardItem(data);
       res.json(item);
     } catch (error: any) {
+      console.error("Error creating clipboard item:", error);
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.put("/api/history/:id/favorite", requireAuth, async (req, res) => {
+  app.put("/api/history/:id/favorite", isAuthenticated, async (req: any, res) => {
     try {
       const item = await storage.toggleFavorite(req.params.id);
       if (!item) {
@@ -302,27 +243,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(item);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("Error toggling favorite:", error);
+      res.status(500).json({ message: "Failed to toggle favorite" });
     }
   });
 
-  app.delete("/api/history/:id", requireAuth, async (req, res) => {
+  app.delete("/api/history/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteClipboardItem(req.params.id);
-      if (!deleted) {
+      const success = await storage.deleteClipboardItem(req.params.id);
+      if (!success) {
         return res.status(404).json({ message: "Item not found" });
       }
-      res.json({ success: true });
+      res.json({ message: "Deleted successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("Error deleting item:", error);
+      res.status(500).json({ message: "Failed to delete item" });
     }
   });
 
-  // ========== BILLING ROUTES ==========
-  app.post("/api/billing/create-subscription", requireAuth, async (req, res) => {
+  // ========== BILLING ROUTES (Requires auth) ==========
+  app.post("/api/billing/create-subscription", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const data = createSubscriptionSchema.parse(req.body);
-      const userId = req.session.userId!;
       
       const user = await storage.getUser(userId);
       if (!user) {
@@ -333,75 +276,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: user.email,
-          metadata: { userId: user.id },
+          email: user.email || undefined,
+          metadata: { userId },
         });
         customerId = customer.id;
       }
       
-      // Get price ID based on plan
-      const priceIds: Record<string, string> = {
-        pro: STRIPE_PRO_PRICE_ID!,
-        team: STRIPE_TEAM_PRICE_ID!,
-      };
-      
-      const priceId = priceIds[data.plan];
-      if (!priceId) {
-        return res.status(400).json({ message: "Invalid plan" });
+      // Select price ID based on plan and billing interval
+      let priceId: string;
+      if (data.plan === "pro") {
+        priceId = data.billingInterval === "year" 
+          ? process.env.STRIPE_PRO_YEARLY_PRICE_ID || STRIPE_PRO_PRICE_ID!
+          : STRIPE_PRO_PRICE_ID!;
+      } else {
+        priceId = data.billingInterval === "year"
+          ? process.env.STRIPE_TEAM_YEARLY_PRICE_ID || STRIPE_TEAM_PRICE_ID!
+          : STRIPE_TEAM_PRICE_ID!;
       }
       
-      // Construct base URL for redirects
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-        : 'http://localhost:5000';
-      
-      // Create Stripe Checkout Session
+      // Create Checkout Session
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "subscription",
         payment_method_types: ["card"],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        success_url: `${baseUrl}/?success=true`,
-        cancel_url: `${baseUrl}/?canceled=true`,
+        line_items: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        success_url: `${req.headers.origin || 'http://localhost:5000'}?checkout=success`,
+        cancel_url: `${req.headers.origin || 'http://localhost:5000'}?checkout=cancel`,
         metadata: {
-          userId: user.id,
+          userId,
           plan: data.plan,
         },
       });
       
-      // Update user with customer ID (subscription will be updated via webhook)
-      await storage.updateUserPlan(userId, user.plan, customerId);
-      
-      res.json({
-        sessionId: session.id,
-        url: session.url,
-      });
-      
+      res.json({ url: session.url });
     } catch (error: any) {
-      console.error("Subscription creation error:", error);
-      res.status(500).json({ message: error.message });
+      console.error("Stripe checkout error:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
     }
   });
 
-  // Stripe webhook handler (must be BEFORE body parsing middleware)
+  app.post("/api/billing/portal", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.stripeCustomerId) {
+        return res.status(400).json({ message: "No billing information found" });
+      }
+      
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: req.headers.origin || 'http://localhost:5000',
+      });
+      
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Billing portal error:", error);
+      res.status(500).json({ message: "Failed to create portal session" });
+    }
+  });
+
+  // Stripe webhook
   app.post("/api/webhooks/stripe", async (req, res) => {
     const sig = req.headers['stripe-signature'];
-    
     if (!sig) {
-      return res.status(400).send('Missing stripe-signature header');
+      return res.status(400).send('No signature');
     }
-
-    let event;
+    
+    let event: Stripe.Event;
     
     try {
-      // Verify webhook signature
       event = stripe.webhooks.constructEvent(
-        req.rawBody,
+        req.body,
         sig,
         process.env.STRIPE_WEBHOOK_SECRET || ''
       );
@@ -409,117 +358,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Webhook signature verification failed:', err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-
+    
     try {
-      // Handle the event
       switch (event.type) {
         case 'checkout.session.completed': {
-          const session = event.data.object as any;
+          const session = event.data.object as Stripe.Checkout.Session;
           const userId = session.metadata?.userId;
           const plan = session.metadata?.plan;
           
-          if (userId && plan) {
+          if (userId && plan && session.customer) {
             await storage.updateUserPlan(
               userId,
               plan,
               session.customer as string,
               session.subscription as string
             );
-            console.log(`✓ Subscription activated for user ${userId}: ${plan}`);
+            
+            // Log conversion event
+            await storage.logConversionEvent(userId, `upgrade_${plan}`, {
+              stripeSessionId: session.id,
+            });
           }
           break;
         }
-
-        case 'customer.subscription.updated': {
-          const subscription = event.data.object as any;
-          const customerId = subscription.customer as string;
-          const user = await storage.getUserByStripeCustomerId(customerId);
-          
-          if (user) {
-            // Subscription status changed - could be active, past_due, cancelled, etc.
-            console.log(`✓ Subscription updated for user ${user.id}: ${subscription.status}`);
-          }
-          break;
-        }
-
+        
+        case 'customer.subscription.updated':
         case 'customer.subscription.deleted': {
-          const subscription = event.data.object as any;
+          const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
-          const user = await storage.getUserByStripeCustomerId(customerId);
           
+          const user = await storage.getUserByStripeCustomerId(customerId);
           if (user) {
-            // Downgrade to free plan when subscription is cancelled
-            await storage.updateUserPlan(user.id, 'free');
-            console.log(`✓ User ${user.id} downgraded to free plan`);
+            const newPlan = subscription.status === 'active' 
+              ? (subscription.items.data[0]?.price.id === STRIPE_TEAM_PRICE_ID ? 'team' : 'pro')
+              : 'free';
+            
+            await storage.updateUserPlan(user.id, newPlan);
           }
           break;
         }
-
-        case 'invoice.payment_failed': {
-          const invoice = event.data.object as any;
-          const customerId = invoice.customer as string;
-          
-          console.log(`Payment failed for customer ${customerId}`);
-          // In production: send email, retry payment, or suspend account
-          break;
-        }
-
-        default:
-          console.log(`Unhandled event type: ${event.type}`);
       }
-
+      
       res.json({ received: true });
     } catch (error: any) {
-      console.error('Webhook handler error:', error);
-      res.status(500).json({ error: error.message });
+      console.error('Error handling webhook:', error);
+      res.status(500).json({ error: 'Webhook handler failed' });
     }
   });
 
-  app.post("/api/billing/portal", requireAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.session.userId!);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      if (!user?.stripeCustomerId) {
-        return res.status(400).json({ message: "No billing account found" });
-      }
-      
-      const session = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
-        return_url: `${req.headers.origin || 'http://localhost:5000'}/settings`,
-      });
-      
-      res.json({ url: session.url });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ========== TELEMETRY ROUTE ==========
-  app.post("/api/telemetry", async (req, res) => {
-    try {
-      // Anonymous telemetry - just log and acknowledge
-      console.log("Telemetry event:", req.body);
-      res.json({ received: true });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // ========== FEEDBACK ROUTE ==========
+  // ========== FEEDBACK ROUTES ==========
   app.post("/api/feedback", async (req, res) => {
     try {
-      const userId = req.body.userId || null; // Optional user ID
-      const data = insertFeedbackSchema.parse({
-        ...req.body,
-        userId,
-      });
-      
-      const feedback = await storage.createFeedback(data);
-      res.json(feedback);
+      const data = insertFeedbackSchema.parse(req.body);
+      const fb = await storage.createFeedback(data);
+      res.json(fb);
     } catch (error: any) {
+      console.error("Error creating feedback:", error);
       res.status(400).json({ message: error.message });
     }
   });

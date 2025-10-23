@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlanBadge } from "@/components/PlanBadge";
 import { ClipboardCard } from "@/components/ClipboardCard";
@@ -21,28 +22,66 @@ import {
   Sparkles,
   Loader2,
   LogOut,
+  LogIn,
+  Cloud,
+  HardDrive,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { localStorageManager, type LocalClipboardItem } from "@/lib/localStorage";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import type { ClipboardItem, User } from "@shared/schema";
 
 export default function Dashboard() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [localItems, setLocalItems] = useState<LocalClipboardItem[]>([]);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
 
-  // Fetch user data
-  const { data: user, isLoading: userLoading } = useQuery<Omit<User, "password">>({
-    queryKey: ["/api/auth/me"],
-  });
-
-  // Fetch clipboard history
+  // Fetch clipboard history (only for authenticated users)
   const { data: clipboardItems = [], isLoading: historyLoading } = useQuery<ClipboardItem[]>({
     queryKey: ["/api/history"],
+    enabled: isAuthenticated,
+    retry: (failureCount, error) => {
+      if (error instanceof Error && isUnauthorizedError(error)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
-  // Toggle favorite mutation
+  // Load local items for anonymous users
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLocalItems(localStorageManager.getItems());
+    }
+  }, [isAuthenticated]);
+
+  // Check for migration opportunity when user logs in
+  useEffect(() => {
+    if (isAuthenticated && localStorageManager.hasItems()) {
+      const itemCount = localStorageManager.getItems().length;
+      toast({
+        title: "Local data found",
+        description: `You have ${itemCount} clipboard item${itemCount > 1 ? 's' : ''} saved locally. Migrate to cloud for sync across devices?`,
+        action: (
+          <Button
+            size="sm"
+            onClick={() => migrateDataMutation.mutate()}
+            disabled={migrateDataMutation.isPending}
+            data-testid="button-migrate-data"
+          >
+            {migrateDataMutation.isPending ? "Migrating..." : "Migrate"}
+          </Button>
+        ),
+      });
+    }
+  }, [isAuthenticated, toast]);
+
+  // Toggle favorite mutation (authenticated)
   const toggleFavoriteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await apiRequest(`/api/history/${id}/favorite`, "PUT", {});
@@ -53,7 +92,7 @@ export default function Dashboard() {
     },
   });
 
-  // Create clipboard item mutation
+  // Create clipboard item mutation (authenticated)
   const createClipboardMutation = useMutation({
     mutationFn: async (data: { content: string; contentType: string; formatted: boolean }) => {
       const res = await apiRequest("/api/history", "POST", data);
@@ -64,7 +103,39 @@ export default function Dashboard() {
     },
   });
 
-  // AI processing mutation
+  // Migrate local data mutation
+  const migrateDataMutation = useMutation({
+    mutationFn: async () => {
+      const localData = localStorageManager.getItems();
+      const res = await apiRequest("/api/migrate-local-data", "POST", {
+        clipboardItems: localData.map(item => ({
+          content: item.content,
+          contentType: item.contentType,
+          formatted: item.formatted,
+          favorite: item.favorite,
+        })),
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      localStorageManager.clear();
+      setLocalItems([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+      toast({
+        title: "Migration complete!",
+        description: `${data.itemsCreated} items migrated to cloud successfully`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Migration failed",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // AI processing mutation (authenticated)
   const aiMutation = useMutation({
     mutationFn: async ({ text, operation }: { text: string; operation: string }) => {
       const res = await apiRequest("/api/v1/ai/process", "POST", { text, operation });
@@ -72,11 +143,11 @@ export default function Dashboard() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 
-  // Feedback mutation
+  // Feedback mutation (authenticated)
   const feedbackMutation = useMutation({
     mutationFn: async ({ rating, message }: { rating: number; message: string }) => {
       const res = await apiRequest("/api/feedback", "POST", { rating, message, userId: user?.id });
@@ -93,19 +164,44 @@ export default function Dashboard() {
   };
 
   const handleToggleFavorite = (id: string) => {
-    toggleFavoriteMutation.mutate(id);
+    if (isAuthenticated) {
+      toggleFavoriteMutation.mutate(id);
+    } else {
+      // Handle local storage toggle
+      localStorageManager.toggleFavorite(id);
+      setLocalItems(localStorageManager.getItems());
+    }
   };
 
   const handleSaveFormattedToHistory = (content: string, contentType: string) => {
-    // Save formatted content to clipboard history
-    createClipboardMutation.mutate({
-      content,
-      contentType,
-      formatted: true,
-    });
+    if (isAuthenticated) {
+      // Save formatted content to clipboard history via API
+      createClipboardMutation.mutate({
+        content,
+        contentType,
+        formatted: true,
+      });
+    } else {
+      // Save to local storage
+      localStorageManager.addItem({
+        content,
+        contentType,
+        formatted: true,
+        favorite: false,
+      });
+      setLocalItems(localStorageManager.getItems());
+      toast({
+        title: "Saved locally",
+        description: "Formatted content saved to local storage",
+      });
+    }
   };
 
   const handleAiAction = async (text: string, operation: string): Promise<string> => {
+    if (!isAuthenticated) {
+      throw new Error("AI features require authentication");
+    }
+
     try {
       const data = await aiMutation.mutateAsync({ text, operation });
       
@@ -181,26 +277,21 @@ export default function Dashboard() {
     }
   };
 
-  const filteredItems = clipboardItems.filter(item =>
+  const handleSignIn = () => {
+    setLocation("/login");
+  };
+
+  // Determine which items to display and filter
+  const displayItems = isAuthenticated ? clipboardItems : localItems;
+  const filteredItems = displayItems.filter(item =>
     item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.contentType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (userLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">User not found</h2>
-          <p className="text-muted-foreground">Please refresh the page</p>
-        </div>
       </div>
     );
   }
@@ -215,18 +306,50 @@ export default function Dashboard() {
               <Sparkles className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-bold" data-testid="text-app-title">DevClip</h1>
             </div>
-            <PlanBadge plan={user.plan as "free" | "pro" | "team"} />
+            {isAuthenticated && user && (
+              <PlanBadge plan={user.plan as "free" | "pro" | "team"} />
+            )}
+            {/* Mode indicator */}
+            <Badge 
+              variant={isAuthenticated ? "default" : "secondary"}
+              className="gap-1"
+              data-testid="badge-mode-indicator"
+            >
+              {isAuthenticated ? (
+                <>
+                  <Cloud className="h-3 w-3" />
+                  Cloud Sync
+                </>
+              ) : (
+                <>
+                  <HardDrive className="h-3 w-3" />
+                  Local Mode
+                </>
+              )}
+            </Badge>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              data-testid="button-logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            {isAuthenticated ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignIn}
+                data-testid="button-signin"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+            )}
             <ThemeToggle />
           </div>
         </div>
@@ -235,7 +358,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="history" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
+          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-4' : 'grid-cols-2'} max-w-2xl mx-auto`}>
             <TabsTrigger value="history" data-testid="tab-history">
               <History className="h-4 w-4 mr-2" />
               History
@@ -244,14 +367,18 @@ export default function Dashboard() {
               <Wand2 className="h-4 w-4 mr-2" />
               Formatters
             </TabsTrigger>
-            <TabsTrigger value="settings" data-testid="tab-settings">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </TabsTrigger>
-            <TabsTrigger value="feedback" data-testid="tab-feedback">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Feedback
-            </TabsTrigger>
+            {isAuthenticated && (
+              <>
+                <TabsTrigger value="settings" data-testid="tab-settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </TabsTrigger>
+                <TabsTrigger value="feedback" data-testid="tab-feedback">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Feedback
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           {/* Clipboard History */}
@@ -268,6 +395,24 @@ export default function Dashboard() {
                 />
               </div>
             </div>
+
+            {!isAuthenticated && (
+              <div className="bg-muted/50 border rounded-lg p-4 text-sm">
+                <p className="text-muted-foreground">
+                  You're using DevClip in local mode. Your clipboard items are stored in your browser. 
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 ml-1"
+                    onClick={handleSignIn}
+                    data-testid="button-signin-prompt"
+                  >
+                    Sign in
+                  </Button>
+                  {" "}to sync across devices and unlock AI features.
+                </p>
+              </div>
+            )}
 
             {historyLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -304,38 +449,42 @@ export default function Dashboard() {
             <FormattersPanel onSaveToHistory={handleSaveFormattedToHistory} />
           </TabsContent>
 
-          {/* Settings */}
-          <TabsContent value="settings">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <SettingsPanel
-                  user={{
-                    email: user.email,
-                    username: user.username,
-                    plan: user.plan as "free" | "pro" | "team",
-                    aiCredits: user.aiCredits,
-                  }}
-                  onUpgrade={() => setUpgradeModalOpen(true)}
-                  onManageBilling={handleManageBilling}
-                />
+          {/* Settings - Authenticated only */}
+          {isAuthenticated && user && (
+            <TabsContent value="settings">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <SettingsPanel
+                    user={{
+                      email: user.email,
+                      username: user.username,
+                      plan: user.plan as "free" | "pro" | "team",
+                      aiCredits: user.aiCreditsBalance,
+                    }}
+                    onUpgrade={() => setUpgradeModalOpen(true)}
+                    onManageBilling={handleManageBilling}
+                  />
+                </div>
+                <div>
+                  <AiActionsPanel
+                    onAiAction={handleAiAction}
+                    plan={user.plan as "free" | "pro" | "team"}
+                    credits={user.aiCreditsBalance}
+                    onUpgrade={() => setUpgradeModalOpen(true)}
+                  />
+                </div>
               </div>
-              <div>
-                <AiActionsPanel
-                  onAiAction={handleAiAction}
-                  plan={user.plan as "free" | "pro" | "team"}
-                  credits={user.aiCredits}
-                  onUpgrade={() => setUpgradeModalOpen(true)}
-                />
-              </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
-          {/* Feedback */}
-          <TabsContent value="feedback">
-            <div className="max-w-2xl mx-auto">
-              <FeedbackForm onSubmit={handleFeedback} />
-            </div>
-          </TabsContent>
+          {/* Feedback - Authenticated only */}
+          {isAuthenticated && (
+            <TabsContent value="feedback">
+              <div className="max-w-2xl mx-auto">
+                <FeedbackForm onSubmit={handleFeedback} />
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 

@@ -1,28 +1,46 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users with subscription tracking
+// Session storage table - required for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Users with Replit Auth + enhanced credit system
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
   plan: text("plan").notNull().default("free"), // free, pro, team
-  aiCredits: integer("ai_credits").notNull().default(10), // Free tier gets 10 credits/month
+  
+  // Enhanced credit system
+  aiCreditsBalance: integer("ai_credits_balance").notNull().default(50), // Current available credits
+  aiCreditsUsed: integer("ai_credits_used").notNull().default(0), // Total credits used this period
+  creditCarryover: integer("credit_carryover").notNull().default(0), // Carried over from previous month
+  lastCreditRefresh: timestamp("last_credit_refresh").defaultNow(), // Last monthly refresh
+  
+  // Stripe integration
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  
+  // A/B testing
+  abTestVariant: text("ab_test_variant").default("control"), // control, testA, testB
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  email: true,
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
 // Clipboard history items
@@ -44,7 +62,7 @@ export const insertClipboardItemSchema = createInsertSchema(clipboardItems).omit
 export type InsertClipboardItem = z.infer<typeof insertClipboardItemSchema>;
 export type ClipboardItem = typeof clipboardItems.$inferSelect;
 
-// AI operation requests for tracking usage
+// AI operation requests for tracking usage with credit costs
 export const aiOperations = pgTable("ai_operations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
@@ -52,6 +70,8 @@ export const aiOperations = pgTable("ai_operations", {
   inputText: text("input_text").notNull(),
   outputText: text("output_text").notNull(),
   tokensUsed: integer("tokens_used").notNull(),
+  creditsUsed: integer("credits_used").notNull().default(1), // 1-3 credits per operation
+  estimatedCost: integer("estimated_cost"), // Cost in cents ($0.002-$0.006 per operation)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -80,12 +100,40 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;
 
-// Sessions for authentication
-export const sessions = pgTable("sessions", {
-  sid: varchar("sid").primaryKey(),
-  sess: text("sess").notNull(),
-  expire: timestamp("expire").notNull(),
+// Team members for Team plan
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamOwnerId: varchar("team_owner_id").notNull(),
+  memberId: varchar("member_id").notNull(),
+  role: text("role").notNull().default("member"), // owner, admin, member
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+
+// API keys for Team tier
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  key: text("key").notNull().unique(),
+  name: text("name").notNull(),
+  lastUsed: timestamp("last_used"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// Conversion events for A/B testing
+export const conversionEvents = pgTable("conversion_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  eventType: text("event_type").notNull(), // signup, upgrade_pro, upgrade_team
+  abTestVariant: text("ab_test_variant"),
+  metadata: jsonb("metadata"), // Additional context
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ConversionEvent = typeof conversionEvents.$inferSelect;
 
 // Zod schemas for API requests
 export const formatRequestSchema = z.object({
@@ -100,21 +148,19 @@ export const aiRequestSchema = z.object({
 
 export const createSubscriptionSchema = z.object({
   plan: z.enum(["pro", "team"]),
+  billingInterval: z.enum(["month", "year"]).optional().default("month"),
 });
 
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
-export const signupSchema = z.object({
-  email: z.string().email(),
-  username: z.string().min(3).max(20),
-  password: z.string().min(8),
+export const migrateLocalDataSchema = z.object({
+  clipboardItems: z.array(z.object({
+    content: z.string(),
+    contentType: z.string(),
+    formatted: z.boolean(),
+    favorite: z.boolean().optional().default(false),
+  })),
 });
 
 export type FormatRequest = z.infer<typeof formatRequestSchema>;
 export type AiRequest = z.infer<typeof aiRequestSchema>;
 export type CreateSubscriptionRequest = z.infer<typeof createSubscriptionSchema>;
-export type LoginRequest = z.infer<typeof loginSchema>;
-export type SignupRequest = z.infer<typeof signupSchema>;
+export type MigrateLocalDataRequest = z.infer<typeof migrateLocalDataSchema>;

@@ -1,36 +1,41 @@
 import { 
   type User, 
-  type InsertUser,
+  type UpsertUser,
   type ClipboardItem,
   type InsertClipboardItem,
   type AiOperation,
   type InsertAiOperation,
   type Feedback,
   type InsertFeedback,
+  type TeamMember,
+  type ApiKey,
+  type ConversionEvent,
   users,
   clipboardItems,
   aiOperations,
   feedback,
+  teamMembers,
+  apiKeys,
+  conversionEvents,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
-import { randomUUID } from "crypto";
-import { hashPassword } from "./auth";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations
+  // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
   updateUserPlan(userId: string, plan: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User>;
-  updateUserCredits(userId: string, credits: number): Promise<User>;
+  updateUserCredits(userId: string, creditsBalance: number, creditsUsed?: number): Promise<User>;
+  deductCredits(userId: string, amount: number): Promise<User>;
+  refreshMonthlyCredits(userId: string): Promise<User>;
   
   // Clipboard operations
   getClipboardItems(userId: string, limit?: number): Promise<ClipboardItem[]>;
   getClipboardItem(id: string): Promise<ClipboardItem | undefined>;
   createClipboardItem(item: InsertClipboardItem): Promise<ClipboardItem>;
+  createClipboardItemsBulk(items: InsertClipboardItem[]): Promise<ClipboardItem[]>;
   toggleFavorite(id: string): Promise<ClipboardItem | undefined>;
   deleteClipboardItem(id: string): Promise<boolean>;
   
@@ -40,38 +45,54 @@ export interface IStorage {
   
   // Feedback
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+  
+  // Team operations
+  getTeamMembers(teamOwnerId: string): Promise<TeamMember[]>;
+  
+  // API keys
+  createApiKey(userId: string, name: string): Promise<ApiKey>;
+  getApiKeys(userId: string): Promise<ApiKey[]>;
+  
+  // A/B testing
+  logConversionEvent(userId: string, eventType: string, metadata?: any): Promise<ConversionEvent>;
 }
 
 export class PostgresStorage implements IStorage {
+  // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return result[0];
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
-    return result[0];
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...userData,
+        // Set defaults for new users
+        plan: "free",
+        aiCreditsBalance: 50,
+        aiCreditsUsed: 0,
+        creditCarryover: 0,
+        abTestVariant: Math.random() > 0.5 ? "control" : "testA", // Simple A/B split
+      })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId)).limit(1);
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const hashedPassword = await hashPassword(insertUser.password);
-    const result = await db.insert(users).values({
-      ...insertUser,
-      password: hashedPassword,
-      plan: "free",
-      aiCredits: 10,
-    }).returning();
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId));
+    return user;
   }
 
   async updateUserPlan(
@@ -80,37 +101,100 @@ export class PostgresStorage implements IStorage {
     stripeCustomerId?: string, 
     stripeSubscriptionId?: string
   ): Promise<User> {
-    // Update credits based on plan
+    // Credit allocation based on plan
     const creditsMap: Record<string, number> = {
-      free: 10,
-      pro: 250,
-      team: 2000,
+      free: 50,
+      pro: 5000,
+      team: 25000,
     };
     
-    const result = await db.update(users)
+    const [user] = await db.update(users)
       .set({
         plan,
-        aiCredits: creditsMap[plan] || 10,
+        aiCreditsBalance: creditsMap[plan] || 50,
         ...(stripeCustomerId && { stripeCustomerId }),
         ...(stripeSubscriptionId && { stripeSubscriptionId }),
+        updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
       .returning();
     
-    if (!result[0]) throw new Error("User not found");
-    return result[0];
+    if (!user) throw new Error("User not found");
+    return user;
   }
 
-  async updateUserCredits(userId: string, credits: number): Promise<User> {
-    const result = await db.update(users)
-      .set({ aiCredits: credits })
+  async updateUserCredits(userId: string, creditsBalance: number, creditsUsed?: number): Promise<User> {
+    const updateData: any = { 
+      aiCreditsBalance: creditsBalance,
+      updatedAt: new Date(),
+    };
+    
+    if (creditsUsed !== undefined) {
+      updateData.aiCreditsUsed = creditsUsed;
+    }
+    
+    const [user] = await db.update(users)
+      .set(updateData)
       .where(eq(users.id, userId))
       .returning();
     
-    if (!result[0]) throw new Error("User not found");
-    return result[0];
+    if (!user) throw new Error("User not found");
+    return user;
   }
 
+  async deductCredits(userId: string, amount: number): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+    
+    if (user.aiCreditsBalance < amount) {
+      throw new Error("Insufficient credits");
+    }
+    
+    const [updatedUser] = await db.update(users)
+      .set({
+        aiCreditsBalance: user.aiCreditsBalance - amount,
+        aiCreditsUsed: user.aiCreditsUsed + amount,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser;
+  }
+
+  async refreshMonthlyCredits(userId: string): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+    
+    // Calculate carryover (unused credits from this month)
+    const unusedCredits = user.aiCreditsBalance;
+    const maxCarryover = user.plan === "pro" ? 10000 : user.plan === "team" ? 50000 : 0;
+    const newCarryover = Math.min(unusedCredits, maxCarryover);
+    
+    // Refresh credits based on plan
+    const monthlyCredits: Record<string, number> = {
+      free: 50,
+      pro: 5000,
+      team: 25000,
+    };
+    
+    const baseCredits = monthlyCredits[user.plan] || 50;
+    
+    const [updatedUser] = await db.update(users)
+      .set({
+        aiCreditsBalance: baseCredits + newCarryover,
+        creditCarryover: newCarryover,
+        aiCreditsUsed: 0,
+        lastCreditRefresh: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser;
+  }
+
+  // Clipboard operations
   async getClipboardItems(userId: string, limit: number = 50): Promise<ClipboardItem[]> {
     return await db.select()
       .from(clipboardItems)
@@ -120,30 +204,37 @@ export class PostgresStorage implements IStorage {
   }
 
   async getClipboardItem(id: string): Promise<ClipboardItem | undefined> {
-    const result = await db.select()
+    const [item] = await db.select()
       .from(clipboardItems)
       .where(eq(clipboardItems.id, id))
       .limit(1);
-    return result[0];
+    return item;
   }
 
   async createClipboardItem(insertItem: InsertClipboardItem): Promise<ClipboardItem> {
-    const result = await db.insert(clipboardItems)
+    const [item] = await db.insert(clipboardItems)
       .values(insertItem)
       .returning();
-    return result[0];
+    return item;
+  }
+
+  async createClipboardItemsBulk(items: InsertClipboardItem[]): Promise<ClipboardItem[]> {
+    if (items.length === 0) return [];
+    return await db.insert(clipboardItems)
+      .values(items)
+      .returning();
   }
 
   async toggleFavorite(id: string): Promise<ClipboardItem | undefined> {
     const item = await this.getClipboardItem(id);
     if (!item) return undefined;
     
-    const result = await db.update(clipboardItems)
+    const [updated] = await db.update(clipboardItems)
       .set({ favorite: !item.favorite })
       .where(eq(clipboardItems.id, id))
       .returning();
     
-    return result[0];
+    return updated;
   }
 
   async deleteClipboardItem(id: string): Promise<boolean> {
@@ -153,11 +244,12 @@ export class PostgresStorage implements IStorage {
     return result.length > 0;
   }
 
+  // AI operations
   async createAiOperation(insertOp: InsertAiOperation): Promise<AiOperation> {
-    const result = await db.insert(aiOperations)
+    const [operation] = await db.insert(aiOperations)
       .values(insertOp)
       .returning();
-    return result[0];
+    return operation;
   }
 
   async getAiOperations(userId: string): Promise<AiOperation[]> {
@@ -167,11 +259,52 @@ export class PostgresStorage implements IStorage {
       .orderBy(desc(aiOperations.createdAt));
   }
 
+  // Feedback
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
-    const result = await db.insert(feedback)
+    const [fb] = await db.insert(feedback)
       .values(insertFeedback)
       .returning();
-    return result[0];
+    return fb;
+  }
+
+  // Team operations
+  async getTeamMembers(teamOwnerId: string): Promise<TeamMember[]> {
+    return await db.select()
+      .from(teamMembers)
+      .where(eq(teamMembers.teamOwnerId, teamOwnerId));
+  }
+
+  // API keys
+  async createApiKey(userId: string, name: string): Promise<ApiKey> {
+    const key = `devclip_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    const [apiKey] = await db.insert(apiKeys)
+      .values({
+        userId,
+        key,
+        name,
+      })
+      .returning();
+    return apiKey;
+  }
+
+  async getApiKeys(userId: string): Promise<ApiKey[]> {
+    return await db.select()
+      .from(apiKeys)
+      .where(eq(apiKeys.userId, userId));
+  }
+
+  // A/B testing
+  async logConversionEvent(userId: string, eventType: string, metadata?: any): Promise<ConversionEvent> {
+    const user = await this.getUser(userId);
+    const [event] = await db.insert(conversionEvents)
+      .values({
+        userId,
+        eventType,
+        abTestVariant: user?.abTestVariant,
+        metadata,
+      })
+      .returning();
+    return event;
   }
 }
 
