@@ -44,12 +44,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Get demo user (for MVP - in production this would be authenticated)
+  // Get or create demo user (for MVP - in production this would be authenticated)
   app.get("/api/user", async (req, res) => {
     try {
-      const user = await storage.getUser("demo-user-1");
+      let user = await storage.getUserByEmail("demo@devclip.com");
+      
+      // Create demo user if doesn't exist
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        user = await storage.createUser({
+          email: "demo@devclip.com",
+          username: "demo",
+          password: "demo", // In production, this would be hashed
+        });
+        
+        // Create demo clipboard items
+        await storage.createClipboardItem({
+          userId: user.id,
+          content: '{"name": "DevClip", "version": "1.0.0", "features": ["formatters", "AI", "sync"]}',
+          contentType: "json",
+          formatted: true,
+          favorite: true,
+        });
+        
+        await storage.createClipboardItem({
+          userId: user.id,
+          content: "SELECT users.*, subscriptions.plan FROM users LEFT JOIN subscriptions ON users.id = subscriptions.user_id WHERE users.plan = 'pro' ORDER BY users.created_at DESC LIMIT 10;",
+          contentType: "sql",
+          formatted: false,
+          favorite: false,
+        });
+        
+        await storage.createClipboardItem({
+          userId: user.id,
+          content: "[ERROR] 2025-01-15 10:23:45 - Database connection failed: timeout after 30s\n[WARN] 2025-01-15 10:23:46 - Retrying connection (attempt 1/3)\n[INFO] 2025-01-15 10:23:48 - Connection established successfully",
+          contentType: "log",
+          formatted: false,
+          favorite: false,
+        });
       }
       
       // Don't send password to client
@@ -96,7 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/v1/ai/process", async (req, res) => {
     try {
       const data = aiRequestSchema.parse(req.body);
-      const userId = "demo-user-1"; // In production, get from auth
+      // Get demo user by email
+      const demoUser = await storage.getUserByEmail("demo@devclip.com");
+      if (!demoUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userId = demoUser.id;
       
       // Get user and check credits
       const user = await storage.getUser(userId);
@@ -181,7 +217,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========== CLIPBOARD ROUTES ==========
   app.get("/api/history", async (req, res) => {
     try {
-      const userId = "demo-user-1"; // In production, get from auth
+      const demoUser = await storage.getUserByEmail("demo@devclip.com");
+      if (!demoUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userId = demoUser.id;
       const limit = parseInt(req.query.limit as string) || 50;
       
       const items = await storage.getClipboardItems(userId, limit);
@@ -193,7 +233,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/history", async (req, res) => {
     try {
-      const userId = "demo-user-1"; // In production, get from auth
+      const demoUser = await storage.getUserByEmail("demo@devclip.com");
+      if (!demoUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userId = demoUser.id;
       const data = insertClipboardItemSchema.parse({
         ...req.body,
         userId,
@@ -234,7 +278,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/billing/create-subscription", async (req, res) => {
     try {
       const data = createSubscriptionSchema.parse(req.body);
-      const userId = "demo-user-1"; // In production, get from auth
+      const demoUser = await storage.getUserByEmail("demo@devclip.com");
+      if (!demoUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userId = demoUser.id;
       
       const user = await storage.getUser(userId);
       if (!user) {
@@ -294,8 +342,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/billing/portal", async (req, res) => {
     try {
-      const userId = "demo-user-1"; // In production, get from auth
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserByEmail("demo@devclip.com");
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       if (!user?.stripeCustomerId) {
         return res.status(400).json({ message: "No billing account found" });

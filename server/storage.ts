@@ -7,7 +7,13 @@ import {
   type InsertAiOperation,
   type Feedback,
   type InsertFeedback,
+  users,
+  clipboardItems,
+  aiOperations,
+  feedback,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -34,91 +40,29 @@ export interface IStorage {
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private clipboardItems: Map<string, ClipboardItem>;
-  private aiOperations: Map<string, AiOperation>;
-  private feedbacks: Map<string, Feedback>;
-
-  constructor() {
-    this.users = new Map();
-    this.clipboardItems = new Map();
-    this.aiOperations = new Map();
-    this.feedbacks = new Map();
-    
-    // Create a demo user for testing
-    const demoUser: User = {
-      id: "demo-user-1",
-      email: "demo@devclip.com",
-      username: "demo",
-      password: "demo", // In production, this would be hashed
-      plan: "free",
-      aiCredits: 10,
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      createdAt: new Date(),
-    };
-    this.users.set(demoUser.id, demoUser);
-    
-    // Add some demo clipboard items
-    const demoItems: ClipboardItem[] = [
-      {
-        id: "clip-1",
-        userId: demoUser.id,
-        content: '{"name": "DevClip", "version": "1.0.0", "features": ["formatters", "AI", "sync"]}',
-        contentType: "json",
-        formatted: true,
-        favorite: true,
-        createdAt: new Date(Date.now() - 1000 * 60 * 5),
-      },
-      {
-        id: "clip-2",
-        userId: demoUser.id,
-        content: "SELECT users.*, subscriptions.plan FROM users LEFT JOIN subscriptions ON users.id = subscriptions.user_id WHERE users.plan = 'pro' ORDER BY users.created_at DESC LIMIT 10;",
-        contentType: "sql",
-        formatted: false,
-        favorite: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 30),
-      },
-      {
-        id: "clip-3",
-        userId: demoUser.id,
-        content: "[ERROR] 2025-01-15 10:23:45 - Database connection failed: timeout after 30s\n[WARN] 2025-01-15 10:23:46 - Retrying connection (attempt 1/3)\n[INFO] 2025-01-15 10:23:48 - Connection established successfully\n[INFO] 2025-01-15 10:23:49 - Migration 001_init completed",
-        contentType: "log",
-        formatted: false,
-        favorite: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60),
-      },
-    ];
-    
-    demoItems.forEach(item => this.clipboardItems.set(item.id, item));
-  }
-
+export class PostgresStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id,
+    const result = await db.insert(users).values({
+      ...insertUser,
       plan: "free",
       aiCredits: 10,
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
-    return user;
+    }).returning();
+    return result[0];
   }
 
   async updateUserPlan(
@@ -127,9 +71,6 @@ export class MemStorage implements IStorage {
     stripeCustomerId?: string, 
     stripeSubscriptionId?: string
   ): Promise<User> {
-    const user = this.users.get(userId);
-    if (!user) throw new Error("User not found");
-    
     // Update credits based on plan
     const creditsMap: Record<string, number> = {
       free: 10,
@@ -137,90 +78,92 @@ export class MemStorage implements IStorage {
       team: 2000,
     };
     
-    const updatedUser = {
-      ...user,
-      plan,
-      aiCredits: creditsMap[plan] || 10,
-      stripeCustomerId: stripeCustomerId || user.stripeCustomerId,
-      stripeSubscriptionId: stripeSubscriptionId || user.stripeSubscriptionId,
-    };
+    const result = await db.update(users)
+      .set({
+        plan,
+        aiCredits: creditsMap[plan] || 10,
+        ...(stripeCustomerId && { stripeCustomerId }),
+        ...(stripeSubscriptionId && { stripeSubscriptionId }),
+      })
+      .where(eq(users.id, userId))
+      .returning();
     
-    this.users.set(userId, updatedUser);
-    return updatedUser;
+    if (!result[0]) throw new Error("User not found");
+    return result[0];
   }
 
   async updateUserCredits(userId: string, credits: number): Promise<User> {
-    const user = this.users.get(userId);
-    if (!user) throw new Error("User not found");
+    const result = await db.update(users)
+      .set({ aiCredits: credits })
+      .where(eq(users.id, userId))
+      .returning();
     
-    const updatedUser = { ...user, aiCredits: credits };
-    this.users.set(userId, updatedUser);
-    return updatedUser;
+    if (!result[0]) throw new Error("User not found");
+    return result[0];
   }
 
   async getClipboardItems(userId: string, limit: number = 50): Promise<ClipboardItem[]> {
-    const items = Array.from(this.clipboardItems.values())
-      .filter(item => item.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
-    return items;
+    return await db.select()
+      .from(clipboardItems)
+      .where(eq(clipboardItems.userId, userId))
+      .orderBy(desc(clipboardItems.createdAt))
+      .limit(limit);
   }
 
   async getClipboardItem(id: string): Promise<ClipboardItem | undefined> {
-    return this.clipboardItems.get(id);
+    const result = await db.select()
+      .from(clipboardItems)
+      .where(eq(clipboardItems.id, id))
+      .limit(1);
+    return result[0];
   }
 
   async createClipboardItem(insertItem: InsertClipboardItem): Promise<ClipboardItem> {
-    const id = randomUUID();
-    const item: ClipboardItem = {
-      ...insertItem,
-      id,
-      createdAt: new Date(),
-    };
-    this.clipboardItems.set(id, item);
-    return item;
+    const result = await db.insert(clipboardItems)
+      .values(insertItem)
+      .returning();
+    return result[0];
   }
 
   async toggleFavorite(id: string): Promise<ClipboardItem | undefined> {
-    const item = this.clipboardItems.get(id);
+    const item = await this.getClipboardItem(id);
     if (!item) return undefined;
     
-    const updated = { ...item, favorite: !item.favorite };
-    this.clipboardItems.set(id, updated);
-    return updated;
+    const result = await db.update(clipboardItems)
+      .set({ favorite: !item.favorite })
+      .where(eq(clipboardItems.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteClipboardItem(id: string): Promise<boolean> {
-    return this.clipboardItems.delete(id);
+    const result = await db.delete(clipboardItems)
+      .where(eq(clipboardItems.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   async createAiOperation(insertOp: InsertAiOperation): Promise<AiOperation> {
-    const id = randomUUID();
-    const operation: AiOperation = {
-      ...insertOp,
-      id,
-      createdAt: new Date(),
-    };
-    this.aiOperations.set(id, operation);
-    return operation;
+    const result = await db.insert(aiOperations)
+      .values(insertOp)
+      .returning();
+    return result[0];
   }
 
   async getAiOperations(userId: string): Promise<AiOperation[]> {
-    return Array.from(this.aiOperations.values())
-      .filter(op => op.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db.select()
+      .from(aiOperations)
+      .where(eq(aiOperations.userId, userId))
+      .orderBy(desc(aiOperations.createdAt));
   }
 
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
-    const id = randomUUID();
-    const feedback: Feedback = {
-      ...insertFeedback,
-      id,
-      createdAt: new Date(),
-    };
-    this.feedbacks.set(id, feedback);
-    return feedback;
+    const result = await db.insert(feedback)
+      .values(insertFeedback)
+      .returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new PostgresStorage();
