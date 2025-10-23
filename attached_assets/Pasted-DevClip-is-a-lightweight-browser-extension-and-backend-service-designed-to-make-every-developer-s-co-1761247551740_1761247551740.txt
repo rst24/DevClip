@@ -1,0 +1,11 @@
+DevClip is a lightweight browser extension and backend service designed to make every developer’s copy-paste workflow faster and cleaner. It automatically formats, cleans, and transforms text locally, with optional AI-powered actions for code explanation, refactoring, and log summarization. The product follows a freemium model: all local formatting is free, while AI and cloud sync features are available through paid tiers ($10/month Pro, $49/month Team). Stripe handles subscriptions, billing portals, and credit limits, ensuring full automation with zero manual customer interaction.
+
+The architecture consists of two parts: a Chrome Extension built using Manifest V3, TypeScript, and Vite; and a backend API built with Node.js, Express, and TypeScript running on Replit. The extension operates locally for privacy and cost control, using IndexedDB to store clipboard history. When Pro features are triggered, it calls the backend API hosted on Replit, which connects to the OpenAI API for AI processing. Credits and user plans are tracked in memory for MVP, with clear migration paths to Supabase.
+
+Core backend routes include /v1/ai/* for OpenAI endpoints, /billing/* for Stripe payments, /history for Pro sync, /telemetry for anonymous opt-in analytics, and /feedback for user validation. The AI layer wraps GPT-4o-mini with strict token caps and safe prompts. The server is fully self-contained, CORS-enabled, and ready for Chrome Web Store deployment.
+
+Local formatting tools cover JSON, YAML, SQL, ANSI cleanup, and log-to-Markdown conversion. The build system uses Vite and Tsup for fast compilation and packaging. Automated tests (Vitest) validate core features like formatters, credit limits, and AI integration before shipping.
+
+Running npm run dev starts both the API and extension in development mode; npm run ship builds a production zip ready for the Chrome Web Store.
+
+DevClip is engineered to be cheap (< $25/month infra), privacy-first, and fully automatable. It combines daily developer pain-relief with AI productivity in a product small enough to build and ship within a single day, yet extensible enough to scale toward a $5 k/month SaaS.
