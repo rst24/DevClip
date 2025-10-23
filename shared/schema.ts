@@ -80,6 +80,13 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;
 
+// Sessions for authentication
+export const sessions = pgTable("sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: text("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
 // Zod schemas for API requests
 export const formatRequestSchema = z.object({
   text: z.string(),
@@ -95,6 +102,19 @@ export const createSubscriptionSchema = z.object({
   plan: z.enum(["pro", "team"]),
 });
 
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export const signupSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(20),
+  password: z.string().min(8),
+});
+
 export type FormatRequest = z.infer<typeof formatRequestSchema>;
 export type AiRequest = z.infer<typeof aiRequestSchema>;
 export type CreateSubscriptionRequest = z.infer<typeof createSubscriptionSchema>;
+export type LoginRequest = z.infer<typeof loginSchema>;
+export type SignupRequest = z.infer<typeof signupSchema>;

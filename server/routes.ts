@@ -16,7 +16,10 @@ import {
   createSubscriptionSchema,
   insertClipboardItemSchema,
   insertFeedbackSchema,
+  loginSchema,
+  signupSchema,
 } from "@shared/schema";
+import { comparePassword } from "./auth";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -44,43 +47,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Get or create demo user (for MVP - in production this would be authenticated)
-  app.get("/api/user", async (req, res) => {
+  // ========== AUTH ROUTES ==========
+  app.post("/api/auth/signup", async (req, res) => {
     try {
-      let user = await storage.getUserByEmail("demo@devclip.com");
+      const data = signupSchema.parse(req.body);
       
-      // Create demo user if doesn't exist
+      // Check if user already exists
+      const existingEmail = await storage.getUserByEmail(data.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+      
+      const existingUsername = await storage.getUserByUsername(data.username);
+      if (existingUsername) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      
+      // Create user
+      const user = await storage.createUser(data);
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      // Don't send password to client
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const data = loginSchema.parse(req.body);
+      
+      // Find user
+      const user = await storage.getUserByEmail(data.email);
       if (!user) {
-        user = await storage.createUser({
-          email: "demo@devclip.com",
-          username: "demo",
-          password: "demo", // In production, this would be hashed
-        });
-        
-        // Create demo clipboard items
-        await storage.createClipboardItem({
-          userId: user.id,
-          content: '{"name": "DevClip", "version": "1.0.0", "features": ["formatters", "AI", "sync"]}',
-          contentType: "json",
-          formatted: true,
-          favorite: true,
-        });
-        
-        await storage.createClipboardItem({
-          userId: user.id,
-          content: "SELECT users.*, subscriptions.plan FROM users LEFT JOIN subscriptions ON users.id = subscriptions.user_id WHERE users.plan = 'pro' ORDER BY users.created_at DESC LIMIT 10;",
-          contentType: "sql",
-          formatted: false,
-          favorite: false,
-        });
-        
-        await storage.createClipboardItem({
-          userId: user.id,
-          content: "[ERROR] 2025-01-15 10:23:45 - Database connection failed: timeout after 30s\n[WARN] 2025-01-15 10:23:46 - Retrying connection (attempt 1/3)\n[INFO] 2025-01-15 10:23:48 - Connection established successfully",
-          contentType: "log",
-          formatted: false,
-          favorite: false,
-        });
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check password
+      const isValid = await comparePassword(data.password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      // Don't send password to client
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
       
       // Don't send password to client
@@ -90,6 +131,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Authentication middleware
+  function requireAuth(req: any, res: any, next: any) {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    next();
+  }
 
   // ========== FORMAT ROUTES ==========
   app.post("/api/format", async (req, res) => {
@@ -124,15 +173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== AI ROUTES ==========
-  app.post("/api/v1/ai/process", async (req, res) => {
+  app.post("/api/v1/ai/process", requireAuth, async (req, res) => {
     try {
       const data = aiRequestSchema.parse(req.body);
-      // Get demo user by email
-      const demoUser = await storage.getUserByEmail("demo@devclip.com");
-      if (!demoUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      const userId = demoUser.id;
+      const userId = req.session.userId!;
       
       // Get user and check credits
       const user = await storage.getUser(userId);
@@ -215,13 +259,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== CLIPBOARD ROUTES ==========
-  app.get("/api/history", async (req, res) => {
+  app.get("/api/history", requireAuth, async (req, res) => {
     try {
-      const demoUser = await storage.getUserByEmail("demo@devclip.com");
-      if (!demoUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      const userId = demoUser.id;
+      const userId = req.session.userId!;
       const limit = parseInt(req.query.limit as string) || 50;
       
       const items = await storage.getClipboardItems(userId, limit);
@@ -231,13 +271,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/history", async (req, res) => {
+  app.post("/api/history", requireAuth, async (req, res) => {
     try {
-      const demoUser = await storage.getUserByEmail("demo@devclip.com");
-      if (!demoUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      const userId = demoUser.id;
+      const userId = req.session.userId!;
       const data = insertClipboardItemSchema.parse({
         ...req.body,
         userId,
@@ -250,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/history/:id/favorite", async (req, res) => {
+  app.put("/api/history/:id/favorite", requireAuth, async (req, res) => {
     try {
       const item = await storage.toggleFavorite(req.params.id);
       if (!item) {
@@ -262,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/history/:id", async (req, res) => {
+  app.delete("/api/history/:id", requireAuth, async (req, res) => {
     try {
       const deleted = await storage.deleteClipboardItem(req.params.id);
       if (!deleted) {
@@ -275,14 +311,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== BILLING ROUTES ==========
-  app.post("/api/billing/create-subscription", async (req, res) => {
+  app.post("/api/billing/create-subscription", requireAuth, async (req, res) => {
     try {
       const data = createSubscriptionSchema.parse(req.body);
-      const demoUser = await storage.getUserByEmail("demo@devclip.com");
-      if (!demoUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      const userId = demoUser.id;
+      const userId = req.session.userId!;
       
       const user = await storage.getUser(userId);
       if (!user) {
@@ -340,9 +372,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/billing/portal", async (req, res) => {
+  app.post("/api/billing/portal", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUserByEmail("demo@devclip.com");
+      const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }

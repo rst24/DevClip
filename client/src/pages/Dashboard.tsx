@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
   Search,
   Sparkles,
   Loader2,
+  LogOut,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -27,11 +29,12 @@ import type { ClipboardItem, User } from "@shared/schema";
 export default function Dashboard() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   // Fetch user data
   const { data: user, isLoading: userLoading } = useQuery<Omit<User, "password">>({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/auth/me"],
   });
 
   // Fetch clipboard history
@@ -64,12 +67,12 @@ export default function Dashboard() {
   // AI processing mutation
   const aiMutation = useMutation({
     mutationFn: async ({ text, operation }: { text: string; operation: string }) => {
-      const res = await apiRequest("POST", "/api/v1/ai/process", { text, operation });
+      const res = await apiRequest("/api/v1/ai/process", "POST", { text, operation });
       const data = await res.json();
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     },
   });
 
@@ -149,6 +152,20 @@ export default function Dashboard() {
     await feedbackMutation.mutateAsync({ rating, message });
   };
 
+  const handleLogout = async () => {
+    try {
+      await apiRequest("/api/auth/logout", "POST", {});
+      queryClient.clear();
+      setLocation("/login");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredItems = clipboardItems.filter(item =>
     item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.contentType.toLowerCase().includes(searchQuery.toLowerCase())
@@ -187,6 +204,14 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { hashPassword } from "./auth";
 
 export interface IStorage {
   // User operations
@@ -57,8 +58,10 @@ export class PostgresStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    const hashedPassword = await hashPassword(insertUser.password);
     const result = await db.insert(users).values({
       ...insertUser,
+      password: hashedPassword,
       plan: "free",
       aiCredits: 10,
     }).returning();
