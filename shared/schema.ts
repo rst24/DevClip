@@ -111,16 +111,32 @@ export const teamMembers = pgTable("team_members", {
 
 export type TeamMember = typeof teamMembers.$inferSelect;
 
-// API keys for Team tier
-export const apiKeys = pgTable("api_keys", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  key: text("key").notNull().unique(),
-  name: text("name").notNull(),
-  lastUsed: timestamp("last_used"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+// API keys for Pro and Team tiers
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    key: text("key").notNull().unique(),
+    name: text("name").notNull(),
+    lastUsed: timestamp("last_used"),
+    revokedAt: timestamp("revoked_at"), // NULL = active, set = revoked
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_api_keys_user_id").on(table.userId),
+    index("idx_api_keys_key").on(table.key),
+  ],
+);
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  lastUsed: true,
+  revokedAt: true,
 });
 
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
 
 // Conversion events for A/B testing

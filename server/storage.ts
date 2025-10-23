@@ -19,7 +19,7 @@ import {
   conversionEvents,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -52,6 +52,9 @@ export interface IStorage {
   // API keys
   createApiKey(userId: string, name: string): Promise<ApiKey>;
   getApiKeys(userId: string): Promise<ApiKey[]>;
+  getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
+  revokeApiKey(id: string): Promise<boolean>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
   
   // A/B testing
   logConversionEvent(userId: string, eventType: string, metadata?: any): Promise<ConversionEvent>;
@@ -276,7 +279,8 @@ export class PostgresStorage implements IStorage {
 
   // API keys
   async createApiKey(userId: string, name: string): Promise<ApiKey> {
-    const key = `devclip_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    const { generateApiKey } = await import("./apiKeyUtils.js");
+    const key = generateApiKey();
     const [apiKey] = await db.insert(apiKeys)
       .values({
         userId,
@@ -290,7 +294,29 @@ export class PostgresStorage implements IStorage {
   async getApiKeys(userId: string): Promise<ApiKey[]> {
     return await db.select()
       .from(apiKeys)
-      .where(eq(apiKeys.userId, userId));
+      .where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKeyByKey(key: string): Promise<ApiKey | undefined> {
+    const [apiKey] = await db.select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.key, key), isNull(apiKeys.revokedAt)));
+    return apiKey;
+  }
+
+  async revokeApiKey(id: string): Promise<boolean> {
+    const result = await db.update(apiKeys)
+      .set({ revokedAt: new Date() })
+      .where(eq(apiKeys.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async updateApiKeyLastUsed(id: string): Promise<void> {
+    await db.update(apiKeys)
+      .set({ lastUsed: new Date() })
+      .where(eq(apiKeys.id, id));
   }
 
   // A/B testing
