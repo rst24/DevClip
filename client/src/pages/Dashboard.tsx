@@ -29,6 +29,7 @@ import {
   Cloud,
   HardDrive,
   BarChart3,
+  Shield,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -334,6 +335,17 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isAuthenticated && user?.isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/admin")}
+                data-testid="button-admin-panel"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            )}
             {isAuthenticated ? (
               <Button
                 variant="ghost"
