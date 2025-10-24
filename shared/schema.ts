@@ -44,15 +44,22 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
 // Clipboard history items
-export const clipboardItems = pgTable("clipboard_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  content: text("content").notNull(),
-  contentType: text("content_type").notNull(), // json, yaml, sql, code, text, log
-  formatted: boolean("formatted").notNull().default(false),
-  favorite: boolean("favorite").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const clipboardItems = pgTable(
+  "clipboard_items",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    content: text("content").notNull(),
+    contentType: text("content_type").notNull(), // json, yaml, sql, code, text, log
+    formatted: boolean("formatted").notNull().default(false),
+    favorite: boolean("favorite").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_clipboard_items_user_id").on(table.userId),
+    index("idx_clipboard_items_created_at").on(table.createdAt),
+  ],
+);
 
 export const insertClipboardItemSchema = createInsertSchema(clipboardItems).omit({
   id: true,
@@ -63,17 +70,25 @@ export type InsertClipboardItem = z.infer<typeof insertClipboardItemSchema>;
 export type ClipboardItem = typeof clipboardItems.$inferSelect;
 
 // AI operation requests for tracking usage with credit costs
-export const aiOperations = pgTable("ai_operations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  operationType: text("operation_type").notNull(), // explain, refactor, summarize
-  inputText: text("input_text").notNull(),
-  outputText: text("output_text").notNull(),
-  tokensUsed: integer("tokens_used").notNull(),
-  creditsUsed: integer("credits_used").notNull().default(1), // 1-3 credits per operation
-  estimatedCost: integer("estimated_cost"), // Cost in cents ($0.002-$0.006 per operation)
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const aiOperations = pgTable(
+  "ai_operations",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    operationType: text("operation_type").notNull(), // explain, refactor, summarize
+    inputText: text("input_text").notNull(),
+    outputText: text("output_text").notNull(),
+    tokensUsed: integer("tokens_used").notNull(),
+    creditsUsed: integer("credits_used").notNull().default(1), // 1-3 credits per operation
+    estimatedCost: integer("estimated_cost"), // Cost in cents ($0.002-$0.006 per operation)
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_ai_operations_user_id").on(table.userId),
+    index("idx_ai_operations_created_at").on(table.createdAt),
+    index("idx_ai_operations_user_created").on(table.userId, table.createdAt),
+  ],
+);
 
 export const insertAiOperationSchema = createInsertSchema(aiOperations).omit({
   id: true,
@@ -84,13 +99,19 @@ export type InsertAiOperation = z.infer<typeof insertAiOperationSchema>;
 export type AiOperation = typeof aiOperations.$inferSelect;
 
 // Feedback submissions
-export const feedback = pgTable("feedback", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id"),
-  rating: integer("rating").notNull(), // 1-5
-  message: text("message"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id"),
+    rating: integer("rating").notNull(), // 1-5
+    message: text("message"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_feedback_user_id").on(table.userId),
+  ],
+);
 
 export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   id: true,
@@ -101,13 +122,20 @@ export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;
 
 // Team members for Team plan
-export const teamMembers = pgTable("team_members", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  teamOwnerId: varchar("team_owner_id").notNull(),
-  memberId: varchar("member_id").notNull(),
-  role: text("role").notNull().default("member"), // owner, admin, member
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    teamOwnerId: varchar("team_owner_id").notNull(),
+    memberId: varchar("member_id").notNull(),
+    role: text("role").notNull().default("member"), // owner, admin, member
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_team_members_owner_id").on(table.teamOwnerId),
+    index("idx_team_members_member_id").on(table.memberId),
+  ],
+);
 
 export type TeamMember = typeof teamMembers.$inferSelect;
 
@@ -140,14 +168,21 @@ export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
 
 // Conversion events for A/B testing
-export const conversionEvents = pgTable("conversion_events", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  eventType: text("event_type").notNull(), // signup, upgrade_pro, upgrade_team
-  abTestVariant: text("ab_test_variant"),
-  metadata: jsonb("metadata"), // Additional context
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const conversionEvents = pgTable(
+  "conversion_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    eventType: text("event_type").notNull(), // signup, upgrade_pro, upgrade_team
+    abTestVariant: text("ab_test_variant"),
+    metadata: jsonb("metadata"), // Additional context
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_conversion_events_user_id").on(table.userId),
+    index("idx_conversion_events_event_type").on(table.eventType),
+  ],
+);
 
 export type ConversionEvent = typeof conversionEvents.$inferSelect;
 
