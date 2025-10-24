@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
 import ApiDocs from "@/pages/ApiDocs";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/docs" component={ApiDocs} />
+      <Route path="/admin" component={Admin} />
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />

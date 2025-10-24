@@ -19,6 +19,7 @@ import {
   insertClipboardItemSchema,
   insertFeedbackSchema,
   migrateLocalDataSchema,
+  type User,
 } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireAdmin } from "./adminMiddleware";
