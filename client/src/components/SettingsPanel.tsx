@@ -109,7 +109,7 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
               </div>
             </div>
             <Badge variant="outline" data-testid="text-credits-balance">
-              {user.aiCreditsBalance.toLocaleString()} credits
+              {(user.aiCreditsBalance ?? 50).toLocaleString()} credits
             </Badge>
           </div>
 
@@ -127,7 +127,7 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
           </div>
 
           {/* Carryover Credits (Pro/Team only) */}
-          {user.plan !== "free" && user.creditCarryover !== undefined && user.creditCarryover > 0 && (
+          {user.plan !== "free" && (user.creditCarryover ?? 0) > 0 && (
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium">Carryover Credits</div>
@@ -136,7 +136,7 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
                 </div>
               </div>
               <Badge variant="outline" data-testid="text-credits-carryover">
-                {user.creditCarryover.toLocaleString()} credits
+                {(user.creditCarryover ?? 0).toLocaleString()} credits
               </Badge>
             </div>
           )}

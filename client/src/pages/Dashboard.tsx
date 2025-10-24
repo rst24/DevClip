@@ -491,7 +491,7 @@ export default function Dashboard() {
                         email: user.email,
                         username: user.username,
                         plan: user.plan as "free" | "pro" | "team",
-                        aiCredits: user.aiCreditsBalance,
+                        aiCredits: user.aiCreditsBalance ?? 50,
                       }}
                       onUpgrade={() => setUpgradeModalOpen(true)}
                       onManageBilling={handleManageBilling}
@@ -501,7 +501,7 @@ export default function Dashboard() {
                     <AiActionsPanel
                       onAiAction={handleAiAction}
                       plan={user.plan as "free" | "pro" | "team"}
-                      credits={user.aiCreditsBalance}
+                      credits={user.aiCreditsBalance ?? 50}
                       onUpgrade={() => setUpgradeModalOpen(true)}
                     />
                   </div>
