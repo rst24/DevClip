@@ -1,7 +1,7 @@
 # DevClip - Developer Clipboard Manager
 
 ## Project Overview
-DevClip is a developer-focused clipboard management tool with a React frontend and Node.js/Express backend. The application provides local text formatting (JSON, YAML, SQL prettify, ANSI strip, log-to-markdown) for free users and AI-powered features (code explanation, refactoring, log summarization via GPT-4o-mini) for paid tiers.
+DevClip is a developer-focused clipboard management tool with a React frontend and Node.js/Express backend. The application provides local text formatting (JSON, YAML, SQL prettify, ANSI strip, log-to-markdown) and AI-powered features (code explanation, refactoring, log summarization) with tiered AI models: GPT-5 Nano for Free, GPT-5 Mini for Pro, and GPT-5 for Team.
 
 ## Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui
@@ -9,7 +9,7 @@ DevClip is a developer-focused clipboard management tool with a React frontend a
 - **Database**: PostgreSQL (Neon) via Drizzle ORM with HTTP connections
 - **Authentication**: bcryptjs (10 salt rounds), express-session with memorystore
 - **Payments**: Stripe Checkout with webhooks
-- **AI**: OpenAI GPT-4o-mini via Replit AI Integrations
+- **AI**: Tiered OpenAI models via Replit AI Integrations (GPT-5 Nano/Mini/Premium)
 
 ## Architecture
 
@@ -30,9 +30,9 @@ DevClip is a developer-focused clipboard management tool with a React frontend a
 5. Frontend uses ProtectedRoute wrapper with useEffect-based redirects
 
 ### Subscription Plans
-- **Free**: 50 AI credits/month, all local formatters, no API access
-- **Pro**: $10/month or $100/year, 5,000 AI credits/month, 10K carryover, 3 API keys max, cloud sync
-- **Team**: $49/month or $490/year, 25,000 AI credits/month, 50K carryover, unlimited API keys, team features
+- **Free**: GPT-5 Nano, 50 AI credits/month, all local formatters, no API access
+- **Pro**: GPT-5 Mini, 5,000 AI credits/month, 10K carryover, 3 API keys max, cloud sync ($10/month or $100/year)
+- **Team**: GPT-5 (Premium), 25,000 AI credits/month, 50K carryover, unlimited API keys, team features ($49/month or $490/year)
 
 ### Stripe Integration
 - Products and price IDs created in Stripe test mode
@@ -138,6 +138,7 @@ All v1 endpoints:
 16. ✅ **Database Optimization**: Added performance indexes on clipboard_items (userId, createdAt), ai_operations (userId, createdAt, composite), feedback (userId), team_members (teamOwnerId, memberId), conversion_events (userId, eventType)
 17. ✅ **Error Tracking & Monitoring**: Implemented error_logs table with recursive sensitive data redaction (handles camelCase/snake_case passwords, tokens, secrets, API keys), positioned error middleware last in chain to capture all errors, includes retry logic for transient failures
 18. ✅ **Frontend Bundle Optimization**: Implemented lazy loading with React.lazy() and Suspense for heavy components (FormattersPanel, Analytics, SettingsPanel, AiActionsPanel, FeedbackForm), reduced main bundle from 855 kB to 388 kB (54% reduction), recharts (430 kB) now lazy-loaded only when Analytics tab clicked
+19. ✅ **Tiered AI Models**: Implemented subscription-tier-based AI models for clear value differentiation - Free tier uses GPT-5 Nano (fast, efficient), Pro tier uses GPT-5 Mini (balanced quality), Team tier uses GPT-5 (premium quality). Frontend displays model tier badges, backend automatically selects model via getModelForPlan(), all AI endpoints updated to use tier-specific models
 
 ## Known Limitations / Production Considerations
 1. **Session Store**: Currently using memorystore (in-memory) which is not suitable for production. Should migrate to PostgreSQL-backed sessions or Redis.
@@ -157,6 +158,7 @@ All v1 endpoints:
 - ✅ Database query optimization (indexes)
 - ✅ Error tracking and monitoring
 - ✅ Frontend bundle optimization (54% reduction)
+- ✅ Tiered AI models (Free: GPT-5 Nano, Pro: GPT-5 Mini, Team: GPT-5)
 
 **Phase 2: Optimization & Growth**
 - Landing page redesign (extension-first)
