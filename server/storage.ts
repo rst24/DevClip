@@ -85,29 +85,42 @@ export class PostgresStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        // Set defaults for new users
-        plan: "free",
-        aiCreditsBalance: 50,
-        aiCreditsUsed: 0,
-        creditCarryover: 0,
-        abTestVariant: Math.random() > 0.5 ? "control" : "testA", // Simple A/B split
-      })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          email: userData.email,
+    // First, try to find existing user by email
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, userData.email));
+
+    if (existingUser) {
+      // Update existing user
+      const [updated] = await db
+        .update(users)
+        .set({
+          id: userData.id, // Update ID in case OIDC provider changed
           firstName: userData.firstName,
           lastName: userData.lastName,
           profileImageUrl: userData.profileImageUrl,
           updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+        })
+        .where(eq(users.email, userData.email))
+        .returning();
+      return updated;
+    } else {
+      // Insert new user
+      const [user] = await db
+        .insert(users)
+        .values({
+          ...userData,
+          // Set defaults for new users
+          plan: "free",
+          aiCreditsBalance: 50,
+          aiCreditsUsed: 0,
+          creditCarryover: 0,
+          abTestVariant: Math.random() > 0.5 ? "control" : "testA", // Simple A/B split
+        })
+        .returning();
+      return user;
+    }
   }
 
   async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
