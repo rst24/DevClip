@@ -46,13 +46,24 @@ interface NewApiKeyResponse {
   message: string;
 }
 
+interface User {
+  plan: 'free' | 'pro' | 'team';
+}
+
 export function ApiKeysPanel() {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState("");
   const [newKeyName, setNewKeyName] = useState("");
   const [generatedKey, setGeneratedKey] = useState<NewApiKeyResponse | null>(null);
   const [keyToRevoke, setKeyToRevoke] = useState<ApiKey | null>(null);
   const [copiedKeyId, setCopiedKeyId] = useState<number | null>(null);
   const { toast } = useToast();
+
+  // Fetch current user
+  const { data: user } = useQuery<User>({
+    queryKey: ["/api/auth/user"],
+  });
 
   // Fetch API keys
   const { data: apiKeys = [], isLoading } = useQuery<ApiKey[]>({
@@ -63,6 +74,12 @@ export function ApiKeysPanel() {
   const generateKeyMutation = useMutation({
     mutationFn: async (name: string) => {
       const res = await apiRequest("/api/keys/generate", "POST", { name });
+      if (!res.ok) {
+        const errorData = await res.json();
+        const error = new Error(errorData.message);
+        (error as any).upgradeRequired = errorData.upgradeRequired;
+        throw error;
+      }
       return res.json();
     },
     onSuccess: (data: NewApiKeyResponse) => {
@@ -75,12 +92,18 @@ export function ApiKeysPanel() {
         description: "Save this key securely - it won't be shown again",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate API key",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      if (error.upgradeRequired) {
+        setUpgradeMessage(error.message);
+        setShowUpgradeDialog(true);
+        setShowGenerateDialog(false);
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to generate API key",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -128,6 +151,18 @@ export function ApiKeysPanel() {
   const activeKeys = apiKeys.filter(k => !k.revokedAt);
   const revokedKeys = apiKeys.filter(k => k.revokedAt);
 
+  // Get key limits based on plan
+  const getKeyLimit = (plan: string | undefined) => {
+    if (plan === 'team') return 'Unlimited';
+    if (plan === 'pro') return '3';
+    return '0';
+  };
+
+  const keyLimit = getKeyLimit(user?.plan);
+  const canGenerateKeys = user?.plan === 'pro' || user?.plan === 'team';
+  const hasReachedLimit = user?.plan === 'pro' && activeKeys.length >= 3;
+  const shouldDisableGenerate = !canGenerateKeys || hasReachedLimit;
+
   return (
     <div className="space-y-6">
       <div>
@@ -137,6 +172,29 @@ export function ApiKeysPanel() {
         </p>
       </div>
 
+      {/* Plan-based key limit info */}
+      {user && (
+        <Card className="p-4 bg-muted/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">
+                {user.plan === 'free' && 'API keys not available on Free plan'}
+                {user.plan === 'pro' && `API Key Limit: ${activeKeys.length} / 3`}
+                {user.plan === 'team' && 'API Keys: Unlimited'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {user.plan === 'free' && 'Upgrade to Pro or Team to access API keys'}
+                {user.plan === 'pro' && 'Pro plan allows up to 3 active API keys'}
+                {user.plan === 'team' && 'Team plan provides unlimited API keys'}
+              </p>
+            </div>
+            <Badge variant="secondary" className="capitalize" data-testid="badge-plan">
+              {user.plan}
+            </Badge>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -144,8 +202,16 @@ export function ApiKeysPanel() {
             <h3 className="font-semibold">Active Keys</h3>
           </div>
           <Button 
-            onClick={() => setShowGenerateDialog(true)} 
+            onClick={() => {
+              if (hasReachedLimit) {
+                setUpgradeMessage("Pro plan limit: 3 API keys maximum. Revoke an existing key or upgrade to Team plan.");
+                setShowUpgradeDialog(true);
+              } else {
+                setShowGenerateDialog(true);
+              }
+            }} 
             size="sm"
+            disabled={shouldDisableGenerate}
             data-testid="button-generate-key"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -162,13 +228,20 @@ export function ApiKeysPanel() {
               No API keys yet. Generate one to access the API.
             </p>
             <Button 
-              onClick={() => setShowGenerateDialog(true)} 
+              onClick={() => {
+                if (!canGenerateKeys) {
+                  setUpgradeMessage("API keys are only available on Pro and Team plans");
+                  setShowUpgradeDialog(true);
+                } else {
+                  setShowGenerateDialog(true);
+                }
+              }} 
               variant="outline"
               size="sm"
               data-testid="button-generate-first-key"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Generate Your First Key
+              {canGenerateKeys ? 'Generate Your First Key' : 'Upgrade to Generate Keys'}
             </Button>
           </div>
         ) : (
@@ -383,6 +456,55 @@ export function ApiKeysPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upgrade Required Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent data-testid="dialog-upgrade-required">
+          <DialogHeader>
+            <DialogTitle>Upgrade Required</DialogTitle>
+            <DialogDescription>
+              {upgradeMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-md border">
+                <div>
+                  <p className="font-medium">Pro Plan</p>
+                  <p className="text-sm text-muted-foreground">3 API keys • 5,000 credits/month</p>
+                </div>
+                <p className="font-semibold">$10/mo</p>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-md border border-primary">
+                <div>
+                  <p className="font-medium">Team Plan</p>
+                  <p className="text-sm text-muted-foreground">Unlimited API keys • 25,000 credits/month</p>
+                </div>
+                <p className="font-semibold">$49/mo</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowUpgradeDialog(false)}
+              data-testid="button-cancel-upgrade"
+            >
+              Maybe Later
+            </Button>
+            <Button
+              onClick={() => {
+                setShowUpgradeDialog(false);
+                const event = new CustomEvent('changePlan');
+                window.dispatchEvent(event);
+              }}
+              data-testid="button-view-plans"
+            >
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

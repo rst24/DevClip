@@ -216,6 +216,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Key name is required" });
       }
       
+      // Check user's plan and enforce API key limits
+      const user = await storage.getUser(userId);
+      const plan = user?.plan || 'free';
+      
+      // Free tier cannot generate API keys
+      if (plan === 'free') {
+        return res.status(403).json({ 
+          message: "API keys are only available on Pro and Team plans",
+          upgradeRequired: true,
+          plan: 'free'
+        });
+      }
+      
+      // Check current active key count
+      const existingKeys = await storage.getApiKeys(userId);
+      const activeKeys = existingKeys.filter(k => !k.revokedAt);
+      
+      // Pro tier: max 3 API keys
+      if (plan === 'pro' && activeKeys.length >= 3) {
+        return res.status(403).json({ 
+          message: "Pro plan limit: 3 API keys maximum. Revoke an existing key or upgrade to Team plan.",
+          upgradeRequired: true,
+          plan: 'pro',
+          currentCount: activeKeys.length,
+          maxAllowed: 3
+        });
+      }
+      
+      // Team tier: unlimited (no check needed)
+      
       // Generate new API key
       const { generateApiKey } = await import("./apiKeyUtils");
       const apiKey = generateApiKey();
