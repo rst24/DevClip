@@ -21,6 +21,7 @@ import {
   migrateLocalDataSchema,
 } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { requireAdmin } from "./adminMiddleware";
 import v1Router from "./routes/v1";
 
 // Initialize Stripe
@@ -653,6 +654,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // ========== ADMIN ROUTES (for admin panel) ==========
+  
+  // Get all users (admin only)
+  app.get("/api/admin/users", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Return users with sensitive data removed
+      const sanitizedUsers = users.map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        plan: user.plan,
+        aiCreditsBalance: user.aiCreditsBalance,
+        aiCreditsUsed: user.aiCreditsUsed,
+        creditCarryover: user.creditCarryover,
+        isAdmin: user.isAdmin,
+        stripeCustomerId: user.stripeCustomerId,
+        createdAt: user.createdAt,
+      }));
+      
+      res.json(sanitizedUsers);
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Update user credits (admin only)
+  app.patch("/api/admin/users/:id/credits", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { aiCreditsBalance } = req.body;
+
+      if (typeof aiCreditsBalance !== 'number' || aiCreditsBalance < 0) {
+        return res.status(400).json({ message: "Invalid credit amount" });
+      }
+
+      const updatedUser = await storage.updateUserCredits(id, aiCreditsBalance);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ 
+        message: "Credits updated successfully",
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          aiCreditsBalance: updatedUser.aiCreditsBalance,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error updating credits:", error);
+      res.status(500).json({ message: "Failed to update credits" });
+    }
+  });
+
+  // Grant/revoke admin access (admin only)
+  app.patch("/api/admin/users/:id/admin", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isAdmin } = req.body;
+
+      if (typeof isAdmin !== 'boolean') {
+        return res.status(400).json({ message: "Invalid admin status" });
+      }
+
+      const updatedUser = await storage.updateUserAdminStatus(id, isAdmin);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ 
+        message: `Admin access ${isAdmin ? 'granted' : 'revoked'} successfully`,
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          isAdmin: updatedUser.isAdmin,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error updating admin status:", error);
+      res.status(500).json({ message: "Failed to update admin status" });
+    }
+  });
+
+  // Get platform statistics (admin only)
+  app.get("/api/admin/stats", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const totalUsers = users.length;
+      const freeUsers = users.filter(u => u.plan === 'free').length;
+      const proUsers = users.filter(u => u.plan === 'pro').length;
+      const teamUsers = users.filter(u => u.plan === 'team').length;
+      
+      // Calculate total credits distributed
+      const totalCredits = users.reduce((sum, u) => sum + (u.aiCreditsBalance || 0), 0);
+      const totalCreditsUsed = users.reduce((sum, u) => sum + (u.aiCreditsUsed || 0), 0);
+
+      res.json({
+        users: {
+          total: totalUsers,
+          free: freeUsers,
+          pro: proUsers,
+          team: teamUsers,
+        },
+        credits: {
+          total: totalCredits,
+          used: totalCreditsUsed,
+          remaining: totalCredits - totalCreditsUsed,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ message: "Failed to fetch statistics" });
     }
   });
 
