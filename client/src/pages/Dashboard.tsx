@@ -283,7 +283,7 @@ export default function Dashboard() {
   };
 
   const handleSignIn = () => {
-    window.location.href = "/auth/replit";
+    window.location.href = "/api/login";
   };
 
   // Determine which items to display and filter
