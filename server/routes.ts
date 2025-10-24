@@ -534,6 +534,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== ANALYTICS ROUTES ==========
+  app.get("/api/analytics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // operations are already sorted by createdAt DESC from storage
+      const operations = await storage.getAiOperations(userId);
+      
+      // Calculate summary stats
+      const totalOperations = operations.length;
+      const totalCreditsUsed = operations.reduce((sum, op) => sum + op.creditsUsed, 0);
+      
+      // Group by operation type
+      const byType: Record<string, { count: number; credits: number }> = {};
+      operations.forEach(op => {
+        if (!byType[op.operationType]) {
+          byType[op.operationType] = { count: 0, credits: 0 };
+        }
+        byType[op.operationType].count++;
+        byType[op.operationType].credits += op.creditsUsed;
+      });
+      
+      // Generate complete 30-day time series with zero-fill
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Start of today
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29); // Include today = 30 days
+      
+      // Initialize all 30 days with zeros
+      const dailyData: Record<string, { date: string; operations: number; credits: number }> = {};
+      for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
+        const dateKey = d.toISOString().split('T')[0];
+        dailyData[dateKey] = { date: dateKey, operations: 0, credits: 0 };
+      }
+      
+      // Fill in actual data
+      operations.forEach(op => {
+        const opDate = new Date(op.createdAt);
+        opDate.setHours(0, 0, 0, 0);
+        if (opDate >= thirtyDaysAgo && opDate <= now) {
+          const dateKey = opDate.toISOString().split('T')[0];
+          if (dailyData[dateKey]) {
+            dailyData[dateKey].operations++;
+            dailyData[dateKey].credits += op.creditsUsed;
+          }
+        }
+      });
+      
+      // Convert to sorted array (chronological order)
+      const dailyTimeSeries = Object.values(dailyData).sort((a, b) => 
+        a.date.localeCompare(b.date)
+      );
+      
+      res.json({
+        summary: {
+          totalOperations,
+          totalCreditsUsed,
+          averageCreditsPerOperation: totalOperations > 0 
+            ? (totalCreditsUsed / totalOperations).toFixed(2) 
+            : 0,
+        },
+        byOperationType: Object.entries(byType).map(([type, data]) => ({
+          operationType: type,
+          count: data.count,
+          credits: data.credits,
+        })),
+        dailyTimeSeries, // Complete 30 days with zero-fill
+        recentOperations: operations.slice(0, 10), // Already sorted DESC by createdAt
+      });
+    } catch (error: any) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   // ========== API V1 ROUTES (for browser extension and external integrations) ==========
   app.use("/api/v1", v1Router);
 

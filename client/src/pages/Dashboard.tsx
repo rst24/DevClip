@@ -13,6 +13,7 @@ import { AiActionsPanel } from "@/components/AiActionsPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { FeedbackForm } from "@/components/FeedbackForm";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { Analytics } from "@/components/Analytics";
 import { 
   History, 
   Wand2, 
@@ -25,6 +26,7 @@ import {
   LogIn,
   Cloud,
   HardDrive,
+  BarChart3,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -358,7 +360,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="history" className="space-y-6">
-          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-4' : 'grid-cols-2'} max-w-2xl mx-auto`}>
+          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-5' : 'grid-cols-2'} max-w-3xl mx-auto`}>
             <TabsTrigger value="history" data-testid="tab-history">
               <History className="h-4 w-4 mr-2" />
               History
@@ -369,6 +371,10 @@ export default function Dashboard() {
             </TabsTrigger>
             {isAuthenticated && (
               <>
+                <TabsTrigger value="analytics" data-testid="tab-analytics">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Analytics
+                </TabsTrigger>
                 <TabsTrigger value="settings" data-testid="tab-settings">
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
@@ -448,6 +454,13 @@ export default function Dashboard() {
           <TabsContent value="formatters">
             <FormattersPanel onSaveToHistory={handleSaveFormattedToHistory} />
           </TabsContent>
+
+          {/* Analytics - Authenticated only */}
+          {isAuthenticated && (
+            <TabsContent value="analytics">
+              <Analytics />
+            </TabsContent>
+          )}
 
           {/* Settings - Authenticated only */}
           {isAuthenticated && user && (
