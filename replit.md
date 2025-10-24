@@ -76,6 +76,9 @@ All v1 endpoints:
 - Track usage in ai_operations table
 - Update cached user balance after each deduction
 
+#### Analytics (Web-based, requires auth)
+- GET `/api/analytics` - Get usage analytics for authenticated user (30-day time series, operation breakdown, recent operations)
+
 #### Billing
 - POST `/api/billing/create-subscription` - Create Stripe checkout session (protected)
 - POST `/api/billing/portal` - Access Stripe customer portal (protected)
@@ -88,6 +91,7 @@ All v1 endpoints:
 - `/` - Dashboard (protected) with tabs:
   - History: Clipboard items with search and favorites
   - Formatters: Local text formatting tools
+  - Analytics: Usage analytics with recharts (30-day time series, operation breakdown, CSV export) - Authenticated only
   - Settings: User profile, plan management, API key management, preferences
   - Feedback: User feedback form
 
@@ -129,6 +133,7 @@ All v1 endpoints:
 12. ✅ **API Documentation**: Comprehensive /docs page with endpoint schemas, multi-language code examples, authentication guide, credit costs, integration patterns
 13. ✅ **Tier-Based API Access**: Free tier blocked from API keys, Pro tier limited to 3 keys, Team tier unlimited, with pre-emptive UI disabling and upgrade prompts
 14. ✅ **Browser Extension (Manifest V3)**: Complete extension structure with popup UI (local formatters + AI tools), background service worker, options page for API key config, clipboard integration (requires PNG icons for deployment)
+15. ✅ **Usage Analytics Dashboard**: Analytics tab with recharts showing 30-day time series (zero-filled), operations by type, credits by type, recent operations list, CSV export
 
 ## Known Limitations / Production Considerations
 1. **Session Store**: Currently using memorystore (in-memory) which is not suitable for production. Should migrate to PostgreSQL-backed sessions or Redis.
@@ -138,20 +143,21 @@ All v1 endpoints:
 5. **Error Handling**: Some edge cases in webhook handling need more robust error recovery.
 
 ## Strategic Roadmap
-**Phase 1: Extension & API** (Current - 67% Complete)
+**Phase 1: Extension & API** (Current - 83% Complete)
 - ✅ REST API v1 with formatter and AI endpoints
 - ✅ API key management system
 - ✅ Browser extension (Manifest V3) for Chrome/Edge
 - ✅ API documentation page with code examples
 - ✅ Tier-based API key limits (Free: 0, Pro: 3, Team: unlimited)
-- ⏳ Extension-first landing page redesign
-- ⏳ Usage analytics dashboard
+- ✅ Usage analytics dashboard with recharts
+- ⏳ Database query optimization (indexes)
 
-**Phase 2: Analytics & Growth**
-- Usage analytics dashboard with recharts
+**Phase 2: Optimization & Growth**
+- Database performance optimization
 - Landing page redesign (extension-first)
 - Chrome Web Store listing assets
 - Usage alerts and notifications
+- Error tracking and monitoring
 
 **Phase 3: Enterprise Features**
 - Team API key sharing
