@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
+import archiver from "archiver";
+import path from "path";
 import { storage } from "./storage";
 import { openai, getModelForPlan, MAX_TOKENS } from "./openai";
 import { 
@@ -55,6 +57,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Extension download
+  app.get("/api/download/extension", (req, res) => {
+    try {
+      const extensionPath = path.join(process.cwd(), 'extension');
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // Maximum compression
+      });
+
+      // Set download headers
+      res.attachment('devclip-extension.zip');
+      res.setHeader('Content-Type', 'application/zip');
+
+      // Pipe archive to response
+      archive.pipe(res);
+
+      // Add extension files to archive
+      archive.directory(extensionPath, false);
+
+      // Finalize the archive
+      archive.finalize();
+
+      archive.on('error', (err) => {
+        console.error('Archive error:', err);
+        res.status(500).json({ message: 'Failed to create extension archive' });
+      });
+    } catch (error: any) {
+      console.error('Extension download error:', error);
+      res.status(500).json({ message: 'Failed to download extension' });
+    }
   });
 
   // ========== AUTH ROUTES ==========

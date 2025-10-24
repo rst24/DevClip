@@ -14,8 +14,8 @@ export default function Landing() {
   };
 
   const handleDownloadExtension = () => {
-    // For now, scroll to extension section
-    document.getElementById('extension-download')?.scrollIntoView({ behavior: 'smooth' });
+    // Direct download of extension zip file
+    window.location.href = '/api/download/extension';
   };
 
   const handleViewDocs = () => {
@@ -250,7 +250,7 @@ export default function Landing() {
                   <ol className="space-y-3 text-sm text-muted-foreground">
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
-                      <span>Download the extension files from GitHub</span>
+                      <span>Download and extract the .zip file</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
@@ -258,11 +258,11 @@ export default function Landing() {
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
-                      <span>Click "Load unpacked" and select the extension folder</span>
+                      <span>Click "Load unpacked" and select the extracted folder</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">4</span>
-                      <span>Configure your API key in extension settings</span>
+                      <span>Configure your API key in extension options (optional for AI features)</span>
                     </li>
                   </ol>
                 </div>
@@ -295,11 +295,11 @@ export default function Landing() {
               <div className="pt-4">
                 <Button 
                   size="lg"
-                  onClick={() => window.open('https://github.com/yourusername/devclip-extension', '_blank')}
-                  data-testid="button-github-extension"
+                  onClick={() => window.location.href = '/api/download/extension'}
+                  data-testid="button-download-extension-zip"
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View on GitHub
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Extension (.zip)
                 </Button>
                 <p className="text-xs text-muted-foreground mt-4">
                   Chrome Web Store listing coming soon
