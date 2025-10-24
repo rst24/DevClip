@@ -15,6 +15,8 @@ import {
   Database,
   ExternalLink,
   Cloud,
+  Mail,
+  HelpCircle,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -266,6 +268,50 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
 
           <Button variant="outline" size="sm" className="mt-2" data-testid="button-clear-history">
             Clear History
+          </Button>
+        </div>
+      </Card>
+
+      {/* Support Section */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <HelpCircle className="h-5 w-5" />
+          <h3 className="font-semibold">Help & Support</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="text-sm text-muted-foreground">
+            Need help with DevClip? Our support team is here for you.
+          </div>
+
+          <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
+            <Mail className="h-5 w-5 text-primary" />
+            <div className="flex-1">
+              <div className="text-sm font-medium">Email Support</div>
+              <a 
+                href="mailto:support@devclip.xyz" 
+                className="text-sm text-primary hover:underline"
+                data-testid="link-support-email-settings"
+              >
+                support@devclip.xyz
+              </a>
+            </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            We typically respond within 24 hours
+          </div>
+
+          <Separator />
+
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => window.location.href = '/docs'}
+            data-testid="button-view-docs"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            View API Documentation
           </Button>
         </div>
       </Card>

@@ -236,11 +236,24 @@ export function UpgradeModal({
           })}
         </div>
 
-        <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            <strong>All plans include:</strong> Local formatting
-            (privacy-first), IndexedDB clipboard history, CORS-enabled API, and
-            automatic updates.
+        <div className="mt-4 space-y-3">
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <div className="text-sm text-muted-foreground">
+              <strong>All plans include:</strong> Local formatting
+              (privacy-first), IndexedDB clipboard history, CORS-enabled API, and
+              automatic updates.
+            </div>
+          </div>
+          
+          <div className="text-center text-sm text-muted-foreground">
+            Questions about pricing or features?{" "}
+            <a 
+              href="mailto:support@devclip.xyz" 
+              className="text-primary hover:underline"
+              data-testid="link-support-email"
+            >
+              Contact support@devclip.xyz
+            </a>
           </div>
         </div>
       </DialogContent>

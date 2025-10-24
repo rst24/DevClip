@@ -422,8 +422,65 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t mt-16">
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-sm text-muted-foreground">
-            <p>DevClip • Built for developers, by developers</p>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              {/* Product */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  DevClip
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Format code in one click. Browser extension with local formatters + AI-powered tools.
+                </p>
+              </div>
+
+              {/* Resources */}
+              <div>
+                <h3 className="font-semibold mb-3">Resources</h3>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>
+                    <a href="/docs" className="hover-elevate rounded px-2 py-1 inline-block" data-testid="link-footer-docs">
+                      API Documentation
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#extension-download" className="hover-elevate rounded px-2 py-1 inline-block" data-testid="link-footer-extension">
+                      Browser Extension
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/app" className="hover-elevate rounded px-2 py-1 inline-block" data-testid="link-footer-app">
+                      Web App
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Support */}
+              <div>
+                <h3 className="font-semibold mb-3">Support</h3>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>
+                    <a 
+                      href="mailto:support@devclip.xyz" 
+                      className="hover-elevate rounded px-2 py-1 inline-block flex items-center gap-1"
+                      data-testid="link-footer-email"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      support@devclip.xyz
+                    </a>
+                  </li>
+                  <li className="text-xs">
+                    We typically respond within 24 hours
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="border-t pt-6 text-center text-sm text-muted-foreground">
+              <p>DevClip • Built for developers, by developers • © {new Date().getFullYear()}</p>
+            </div>
           </div>
         </div>
       </footer>
