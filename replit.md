@@ -163,11 +163,12 @@ All v1 endpoints:
 19. ✅ **Tiered AI Models**: Implemented subscription-tier-based AI models for clear value differentiation - Free tier uses GPT-5 Nano (fast, efficient), Pro tier uses GPT-5 Mini (balanced quality), Team tier uses GPT-5 (premium quality). Frontend displays model tier badges, backend automatically selects model via getModelForPlan(), all AI endpoints updated to use tier-specific models
 
 ## Known Limitations / Production Considerations
-1. **Session Store**: Currently using memorystore (in-memory) which is not suitable for production. Should migrate to PostgreSQL-backed sessions or Redis.
+1. **Session Store**: Currently using PostgreSQL-backed sessions (via connect-pg-simple). Production-ready.
 2. **Stripe Keys**: Price IDs created with test keys need to match the STRIPE_SECRET_KEY environment (use TESTING_STRIPE_SECRET_KEY for development).
 3. **Webhook Signature**: STRIPE_WEBHOOK_SECRET needs to be configured in Stripe dashboard and added to environment.
 4. **AI Credits**: No automatic credit refresh implemented yet - needs scheduled job to reset monthly credits.
 5. **Error Handling**: Some edge cases in webhook handling need more robust error recovery.
+6. **Replit Auth Testing**: In development/testing environments, `/api/login` may redirect to relative `/auth/replit` path. This is expected behavior as Replit OIDC discovery returns relative endpoints. Full SSO flow requires actual user authentication and cannot be fully automated in e2e tests. In production (published Replit apps), the OIDC endpoints resolve correctly to absolute URLs.
 
 ## Strategic Roadmap
 **Phase 1: Extension & API** (Current - 100% Complete) ✅
