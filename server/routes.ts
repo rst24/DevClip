@@ -19,6 +19,7 @@ import {
   migrateLocalDataSchema,
 } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import v1Router from "./routes/v1";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -417,6 +418,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: error.message });
     }
   });
+
+  // ========== API V1 ROUTES (for browser extension and external integrations) ==========
+  app.use("/api/v1", v1Router);
 
   const httpServer = createServer(app);
   return httpServer;
