@@ -36,6 +36,9 @@ export const users = pgTable("users", {
   // A/B testing
   abTestVariant: text("ab_test_variant").default("control"), // control, testA, testB
   
+  // Admin access
+  isAdmin: boolean("is_admin").notNull().default(false),
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

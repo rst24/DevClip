@@ -15,7 +15,10 @@ import { cn } from "@/lib/utils";
 interface UpgradeModalProps {
   open: boolean;
   onClose: () => void;
-  onSelectPlan: (plan: "pro" | "team", billingInterval: "month" | "year") => void;
+  onSelectPlan: (
+    plan: "pro" | "team",
+    billingInterval: "month" | "year",
+  ) => void;
 }
 
 type BillingInterval = "month" | "year";
@@ -24,8 +27,8 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 10,
-    annualPrice: 100,
+    monthlyPrice: 8.99,
+    annualPrice: 89,
     icon: Crown,
     description: "Perfect for individual developers",
     features: [
@@ -42,8 +45,8 @@ const plans = [
   {
     id: "team",
     name: "Team",
-    monthlyPrice: 49,
-    annualPrice: 490,
+    monthlyPrice: 39.99,
+    annualPrice: 399,
     icon: Users,
     description: "For development teams",
     features: [
@@ -66,20 +69,28 @@ const freeFeatures = [
   "Privacy-first design",
 ];
 
-export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps) {
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>("month");
+export function UpgradeModal({
+  open,
+  onClose,
+  onSelectPlan,
+}: UpgradeModalProps) {
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("month");
 
-  const getPrice = (plan: typeof plans[0]) => {
+  const getPrice = (plan: (typeof plans)[0]) => {
     return billingInterval === "month" ? plan.monthlyPrice : plan.annualPrice;
   };
 
-  const getSavings = (plan: typeof plans[0]) => {
+  const getSavings = (plan: (typeof plans)[0]) => {
     return plan.monthlyPrice * 12 - plan.annualPrice;
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-upgrade">
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        data-testid="dialog-upgrade"
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
@@ -111,7 +122,11 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
             Annual
           </Button>
           {billingInterval === "year" && (
-            <Badge variant="default" className="ml-2" data-testid="badge-annual-savings">
+            <Badge
+              variant="default"
+              className="ml-2"
+              data-testid="badge-annual-savings"
+            >
               Save up to $98/year
             </Badge>
           )}
@@ -125,7 +140,7 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
               <div className="text-3xl font-bold mb-2">$0</div>
               <div className="text-sm text-muted-foreground">Forever free</div>
             </div>
-            
+
             <div className="space-y-3 mb-6">
               {freeFeatures.map((feature, i) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
@@ -135,9 +150,9 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
               ))}
             </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full" 
+            <Button
+              variant="outline"
+              className="w-full"
               disabled
               data-testid="button-plan-free"
             >
@@ -150,13 +165,13 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
             const Icon = plan.icon;
             const price = getPrice(plan);
             const savings = getSavings(plan);
-            
+
             return (
               <Card
                 key={plan.id}
                 className={cn(
                   "p-6 relative",
-                  plan.popular && "border-primary shadow-lg"
+                  plan.popular && "border-primary shadow-lg",
                 )}
               >
                 {plan.popular && (
@@ -175,8 +190,8 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
                   <div className="flex items-baseline gap-2">
                     <div className="text-3xl font-bold">${price}</div>
                     {billingInterval === "year" && (
-                      <Badge 
-                        variant="secondary" 
+                      <Badge
+                        variant="secondary"
                         className="text-xs"
                         data-testid={`badge-savings-${plan.id}`}
                       >
@@ -187,10 +202,14 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
                   <div className="text-sm text-muted-foreground mb-2">
                     per {billingInterval}
                     {billingInterval === "year" && (
-                      <span className="ml-1 text-xs">(${(price / 12).toFixed(2)}/mo)</span>
+                      <span className="ml-1 text-xs">
+                        (${(price / 12).toFixed(2)}/mo)
+                      </span>
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground">{plan.description}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {plan.description}
+                  </div>
                 </div>
 
                 <div className="space-y-3 mb-6">
@@ -205,7 +224,9 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
                 <Button
                   variant={plan.popular ? "default" : "outline"}
                   className="w-full"
-                  onClick={() => onSelectPlan(plan.id as "pro" | "team", billingInterval)}
+                  onClick={() =>
+                    onSelectPlan(plan.id as "pro" | "team", billingInterval)
+                  }
                   data-testid={`button-plan-${plan.id}`}
                 >
                   Upgrade to {plan.name}
@@ -217,8 +238,9 @@ export function UpgradeModal({ open, onClose, onSelectPlan }: UpgradeModalProps)
 
         <div className="mt-4 p-4 bg-muted/50 rounded-lg">
           <div className="text-sm text-muted-foreground">
-            <strong>All plans include:</strong> Local formatting (privacy-first), 
-            IndexedDB clipboard history, CORS-enabled API, and automatic updates.
+            <strong>All plans include:</strong> Local formatting
+            (privacy-first), IndexedDB clipboard history, CORS-enabled API, and
+            automatic updates.
           </div>
         </div>
       </DialogContent>
