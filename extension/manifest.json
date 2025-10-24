@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "DevClip - Developer Clipboard Manager",
+  "version": "1.0.0",
+  "description": "Local text formatting and AI-powered code tools for developers",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://localhost:5000/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "options_page": "options/options.html",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
