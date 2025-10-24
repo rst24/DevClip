@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { PlanBadge } from "./PlanBadge";
+import { ApiKeysPanel } from "./ApiKeysPanel";
 import { 
   Settings, 
   User, 
@@ -239,6 +240,9 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
           </div>
         </div>
       </Card>
+
+      {/* API Keys Section */}
+      <ApiKeysPanel />
 
       {/* Privacy Section */}
       <Card className="p-6">

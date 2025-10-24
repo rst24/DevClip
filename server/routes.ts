@@ -206,6 +206,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== API KEY MANAGEMENT ROUTES (Requires auth) ==========
+  app.post("/api/keys/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ message: "Key name is required" });
+      }
+      
+      // Generate new API key
+      const { generateApiKey } = await import("./apiKeyUtils");
+      const apiKey = generateApiKey();
+      
+      const newKey = await storage.createApiKey({
+        userId,
+        key: apiKey,
+        name: name.trim(),
+      });
+      
+      // Return the key once (user must save it)
+      res.json({ 
+        id: newKey.id,
+        name: newKey.name,
+        key: apiKey,
+        createdAt: newKey.createdAt,
+        message: "Save this key securely - it won't be shown again"
+      });
+    } catch (error: any) {
+      console.error("Error generating API key:", error);
+      res.status(500).json({ message: "Failed to generate API key" });
+    }
+  });
+
+  app.get("/api/keys", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const keys = await storage.getApiKeys(userId);
+      
+      // Mask the keys for security (show only last 4 chars)
+      const maskedKeys = keys.map(k => ({
+        id: k.id,
+        name: k.name,
+        keyPreview: `***${k.key.slice(-4)}`,
+        createdAt: k.createdAt,
+        lastUsedAt: k.lastUsedAt,
+        revokedAt: k.revokedAt,
+      }));
+      
+      res.json(maskedKeys);
+    } catch (error: any) {
+      console.error("Error fetching API keys:", error);
+      res.status(500).json({ message: "Failed to fetch API keys" });
+    }
+  });
+
+  app.delete("/api/keys/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const keyId = parseInt(req.params.id);
+      
+      if (isNaN(keyId)) {
+        return res.status(400).json({ message: "Invalid key ID" });
+      }
+      
+      // Verify key belongs to user before revoking
+      const keys = await storage.getApiKeys(userId);
+      const keyToRevoke = keys.find(k => k.id === keyId);
+      
+      if (!keyToRevoke) {
+        return res.status(404).json({ message: "API key not found" });
+      }
+      
+      if (keyToRevoke.revokedAt) {
+        return res.status(400).json({ message: "API key already revoked" });
+      }
+      
+      await storage.revokeApiKey(keyId);
+      res.json({ message: "API key revoked successfully" });
+    } catch (error: any) {
+      console.error("Error revoking API key:", error);
+      res.status(500).json({ message: "Failed to revoke API key" });
+    }
+  });
+
   // ========== CLIPBOARD HISTORY ROUTES (Requires auth) ==========
   app.get("/api/history", isAuthenticated, async (req: any, res) => {
     try {
