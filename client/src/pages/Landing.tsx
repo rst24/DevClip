@@ -13,9 +13,12 @@ export default function Landing() {
     window.location.href = "/app";
   };
 
-  const handleDownloadExtension = () => {
-    // Direct download of extension zip file
-    window.location.href = '/api/download/extension';
+  const handleScrollToExtension = () => {
+    // Smooth scroll to installation section
+    document.getElementById('extension-download')?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
   };
 
   const handleViewDocs = () => {
@@ -67,12 +70,12 @@ export default function Landing() {
               <div className="flex flex-col gap-4">
                 <Button 
                   size="lg" 
-                  onClick={handleDownloadExtension}
+                  onClick={handleScrollToExtension}
                   className="text-lg px-8 w-full sm:w-auto"
-                  data-testid="button-download-extension"
+                  data-testid="button-get-extension"
                 >
                   <Chrome className="mr-2 h-5 w-5" />
-                  Download Extension
+                  Get Extension
                 </Button>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button 
