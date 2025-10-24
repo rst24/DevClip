@@ -84,11 +84,21 @@ All v1 endpoints:
 ### Frontend Pages
 - `/login` - Login page
 - `/signup` - Signup page
+- `/docs` - API documentation with endpoint specs, code examples, authentication guide
 - `/` - Dashboard (protected) with tabs:
   - History: Clipboard items with search and favorites
   - Formatters: Local text formatting tools
   - Settings: User profile, plan management, API key management, preferences
   - Feedback: User feedback form
+
+### Browser Extension
+- **Location**: `extension/` directory
+- **Manifest**: Manifest V3 compliant
+- **Popup**: Local formatters (JSON, YAML, SQL, ANSI, log-to-markdown) + AI tools (explain, refactor, summarize)
+- **Background Worker**: Service worker for API requests with Bearer token authentication
+- **Options Page**: API key configuration, connection testing, quick links to web dashboard
+- **Permissions**: storage, activeTab, clipboardRead, clipboardWrite
+- **Note**: Requires proper PNG icons (16x16, 48x48, 128x128) to load in Chrome
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string (Neon)
@@ -116,6 +126,9 @@ All v1 endpoints:
 9. ✅ **API Key System**: Crypto-based key generation, Bearer token auth middleware, soft-delete revocation
 10. ✅ **Credit-Based Rate Limiting**: Pre-flight credit checks, atomic deduction with cache refresh, 402 responses when depleted
 11. ✅ **API Key Management UI**: Settings panel with generate/revoke/copy functionality, masked key display, comprehensive error handling
+12. ✅ **API Documentation**: Comprehensive /docs page with endpoint schemas, multi-language code examples, authentication guide, credit costs, integration patterns
+13. ✅ **Tier-Based API Access**: Free tier blocked from API keys, Pro tier limited to 3 keys, Team tier unlimited, with pre-emptive UI disabling and upgrade prompts
+14. ✅ **Browser Extension (Manifest V3)**: Complete extension structure with popup UI (local formatters + AI tools), background service worker, options page for API key config, clipboard integration (requires PNG icons for deployment)
 
 ## Known Limitations / Production Considerations
 1. **Session Store**: Currently using memorystore (in-memory) which is not suitable for production. Should migrate to PostgreSQL-backed sessions or Redis.
@@ -125,12 +138,14 @@ All v1 endpoints:
 5. **Error Handling**: Some edge cases in webhook handling need more robust error recovery.
 
 ## Strategic Roadmap
-**Phase 1: Extension & API** (Current)
+**Phase 1: Extension & API** (Current - 67% Complete)
 - ✅ REST API v1 with formatter and AI endpoints
 - ✅ API key management system
-- ⏳ Browser extension (Manifest V3) for Chrome/Edge
-- ⏳ API documentation page with code examples
-- ⏳ Tier-based API key limits (Free: 0, Pro: 3, Team: unlimited)
+- ✅ Browser extension (Manifest V3) for Chrome/Edge
+- ✅ API documentation page with code examples
+- ✅ Tier-based API key limits (Free: 0, Pro: 3, Team: unlimited)
+- ⏳ Extension-first landing page redesign
+- ⏳ Usage analytics dashboard
 
 **Phase 2: Analytics & Growth**
 - Usage analytics dashboard with recharts

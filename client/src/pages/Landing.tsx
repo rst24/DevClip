@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Sparkles, Wand2, Cloud, Zap, Code, Lock } from "lucide-react";
+import { Sparkles, Wand2, Cloud, Zap, Code, Lock, Download, Chrome, ExternalLink, FileJson, Terminal, Braces } from "lucide-react";
 
 export default function Landing() {
   const handleSignIn = () => {
@@ -10,6 +11,15 @@ export default function Landing() {
 
   const handleTryFormatters = () => {
     window.location.href = "/app";
+  };
+
+  const handleDownloadExtension = () => {
+    // For now, scroll to extension section
+    document.getElementById('extension-download')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleViewDocs = () => {
+    window.location.href = "/docs";
   };
 
   return (
@@ -36,42 +46,107 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              Your Developer Clipboard,
-              <span className="text-primary"> Supercharged</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Format JSON, YAML, SQL instantly. Clean logs. Explain code with AI. 
-              All in one privacy-first tool built for developers.
-            </p>
-          </div>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Badge variant="secondary" className="text-sm">
+                  <Download className="h-3 w-3 mr-1" />
+                  Now Available for Chrome & Edge
+                </Badge>
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+                  Format Code in
+                  <span className="text-primary"> One Click</span>
+                </h1>
+                <p className="text-xl text-muted-foreground">
+                  Browser extension with local JSON, YAML, SQL formatters + AI-powered code tools. 
+                  Format instantly, explain code, refactor with GPT-4.
+                </p>
+              </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              onClick={handleTryFormatters}
-              className="text-lg px-8"
-              data-testid="button-try-formatters"
-            >
-              <Wand2 className="mr-2 h-5 w-5" />
-              Try Formatters Free
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              onClick={handleSignIn}
-              className="text-lg px-8"
-              data-testid="button-signin-hero"
-            >
-              Sign In for AI Features
-            </Button>
-          </div>
+              <div className="flex flex-col gap-4">
+                <Button 
+                  size="lg" 
+                  onClick={handleDownloadExtension}
+                  className="text-lg px-8 w-full sm:w-auto"
+                  data-testid="button-download-extension"
+                >
+                  <Chrome className="mr-2 h-5 w-5" />
+                  Download Extension
+                </Button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={handleTryFormatters}
+                    className="flex-1"
+                    data-testid="button-try-web"
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Or Try Web Version
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={handleViewDocs}
+                    className="flex-1"
+                    data-testid="button-view-docs"
+                  >
+                    <Code className="mr-2 h-4 w-4" />
+                    API Docs
+                  </Button>
+                </div>
+              </div>
 
-          <p className="text-sm text-muted-foreground">
-            No signup required to try formatters • All formatting runs locally in your browser
-          </p>
+              <p className="text-sm text-muted-foreground">
+                Free local formatters • 50 AI credits/month • Pro: 5,000 credits + API access
+              </p>
+            </div>
+
+            <div className="relative">
+              <Card className="p-6 bg-muted/50">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Chrome className="h-5 w-5" />
+                      <span className="font-semibold">DevClip Extension</span>
+                    </div>
+                    <Badge variant="secondary">v1.0</Badge>
+                  </div>
+                  <div className="border rounded-md p-4 bg-background space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileJson className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Format JSON</span>
+                      <Badge variant="outline" className="ml-auto text-xs">Free</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Braces className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Format YAML</span>
+                      <Badge variant="outline" className="ml-auto text-xs">Free</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Terminal className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Strip ANSI</span>
+                      <Badge variant="outline" className="ml-auto text-xs">Free</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Explain Code (AI)</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">1 credit</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Wand2 className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Refactor Code (AI)</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">2 credits</Badge>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    All formatters work offline • AI features require API key
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -133,15 +208,104 @@ export default function Landing() {
             </CardHeader>
           </Card>
 
-          <Card data-testid="card-feature-devtools">
+          <Card data-testid="card-feature-extension">
             <CardHeader>
-              <Code className="h-8 w-8 text-primary mb-2" />
-              <CardTitle>Developer Tools</CardTitle>
+              <Chrome className="h-8 w-8 text-primary mb-2" />
+              <CardTitle>Browser Extension</CardTitle>
               <CardDescription>
-                Built by developers, for developers. 
-                Chrome extension coming soon.
+                Chrome & Edge extension with local formatters and AI tools. 
+                One-click access from any webpage.
               </CardDescription>
             </CardHeader>
+          </Card>
+
+          <Card data-testid="card-feature-api">
+            <CardHeader>
+              <Code className="h-8 w-8 text-primary mb-2" />
+              <CardTitle>REST API</CardTitle>
+              <CardDescription>
+                Integrate DevClip into CI/CD, LangChain, n8n workflows. 
+                Comprehensive API for automation.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </section>
+
+      {/* Extension Download */}
+      <section id="extension-download" className="container mx-auto px-4 py-16 bg-muted/50">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold">Get the Extension</h2>
+            <p className="text-lg text-muted-foreground">
+              Install DevClip for Chrome or Edge in seconds
+            </p>
+          </div>
+
+          <Card className="p-8">
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4 text-left">
+                  <h3 className="font-semibold text-lg">Installation Steps</h3>
+                  <ol className="space-y-3 text-sm text-muted-foreground">
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+                      <span>Download the extension files from GitHub</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
+                      <span>Open chrome://extensions/ and enable Developer mode</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
+                      <span>Click "Load unpacked" and select the extension folder</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">4</span>
+                      <span>Configure your API key in extension settings</span>
+                    </li>
+                  </ol>
+                </div>
+                <div className="space-y-4 text-left">
+                  <h3 className="font-semibold text-lg">What's Included</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span>Local formatters (JSON, YAML, SQL, ANSI)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span>AI code explanation (requires API key)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span>Code refactoring suggestions</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span>Log summarization</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span>Clipboard integration</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div className="pt-4">
+                <Button 
+                  size="lg"
+                  onClick={() => window.open('https://github.com/yourusername/devclip-extension', '_blank')}
+                  data-testid="button-github-extension"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View on GitHub
+                </Button>
+                <p className="text-xs text-muted-foreground mt-4">
+                  Chrome Web Store listing coming soon
+                </p>
+              </div>
+            </div>
           </Card>
         </div>
       </section>
@@ -152,7 +316,7 @@ export default function Landing() {
           <div className="space-y-4">
             <h2 className="text-3xl md:text-4xl font-bold">Simple, Transparent Pricing</h2>
             <p className="text-lg text-muted-foreground">
-              Start free, upgrade when you need AI power
+              Start free, upgrade when you need AI power and API access
             </p>
           </div>
 
@@ -169,7 +333,8 @@ export default function Landing() {
               <CardContent className="space-y-2">
                 <p className="text-sm">✓ Local formatting</p>
                 <p className="text-sm">✓ 50 AI credits/month</p>
-                <p className="text-sm">✓ No login required</p>
+                <p className="text-sm">✓ Browser extension</p>
+                <p className="text-sm text-muted-foreground">✗ No API keys</p>
               </CardContent>
             </Card>
 
@@ -185,7 +350,7 @@ export default function Landing() {
               <CardContent className="space-y-2">
                 <p className="text-sm">✓ Everything in Free</p>
                 <p className="text-sm">✓ 5,000 AI credits</p>
-                <p className="text-sm">✓ Cloud sync</p>
+                <p className="text-sm">✓ 3 API keys</p>
                 <p className="text-sm">✓ Credit carryover</p>
               </CardContent>
             </Card>
@@ -202,8 +367,8 @@ export default function Landing() {
               <CardContent className="space-y-2">
                 <p className="text-sm">✓ Everything in Pro</p>
                 <p className="text-sm">✓ 25,000 shared credits</p>
-                <p className="text-sm">✓ Admin dashboard</p>
-                <p className="text-sm">✓ API access</p>
+                <p className="text-sm">✓ Unlimited API keys</p>
+                <p className="text-sm">✓ Team features</p>
               </CardContent>
             </Card>
           </div>
@@ -215,18 +380,28 @@ export default function Landing() {
         <Card className="max-w-3xl mx-auto">
           <CardHeader className="text-center space-y-4">
             <CardTitle className="text-2xl md:text-3xl">
-              Ready to supercharge your clipboard?
+              Ready to streamline your developer workflow?
             </CardTitle>
             <CardDescription className="text-lg">
-              Try formatters now, no signup needed. Sign in when you're ready for AI features.
+              Get the extension, try formatters, or integrate our API into your tools
             </CardDescription>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button 
                 size="lg" 
-                onClick={handleTryFormatters}
-                data-testid="button-cta-try"
+                onClick={handleDownloadExtension}
+                data-testid="button-cta-extension"
               >
-                Start Formatting
+                <Chrome className="mr-2 h-4 w-4" />
+                Get Extension
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={handleViewDocs}
+                data-testid="button-cta-docs"
+              >
+                <Code className="mr-2 h-4 w-4" />
+                View API Docs
               </Button>
               <Button 
                 size="lg" 
