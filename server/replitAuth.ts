@@ -113,23 +113,63 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    const strategyName = `replitauth:${req.hostname}`;
-    console.log(`[Auth] Login attempt for hostname: ${req.hostname}, using strategy: ${strategyName}`);
-    
-    passport.authenticate(strategyName, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+    try {
+      const strategyName = `replitauth:${req.hostname}`;
+      console.log(`[Auth] Login attempt for hostname: ${req.hostname}, using strategy: ${strategyName}`);
+      
+      passport.authenticate(strategyName, {
+        prompt: "login consent",
+        scope: ["openid", "email", "profile", "offline_access"],
+      })(req, res, next);
+    } catch (error: any) {
+      console.error("[Auth] Error in /api/login:", error);
+      res.status(500).json({ 
+        message: "Authentication error", 
+        error: error.message 
+      });
+    }
   });
 
   app.get("/api/callback", (req, res, next) => {
-    const strategyName = `replitauth:${req.hostname}`;
-    console.log(`[Auth] Callback received for hostname: ${req.hostname}, using strategy: ${strategyName}`);
-    
-    passport.authenticate(strategyName, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
-    })(req, res, next);
+    try {
+      const strategyName = `replitauth:${req.hostname}`;
+      console.log(`[Auth] Callback received for hostname: ${req.hostname}, using strategy: ${strategyName}`);
+      console.log(`[Auth] Callback query params:`, req.query);
+      
+      passport.authenticate(strategyName, (err: any, user: any, info: any) => {
+        if (err) {
+          console.error("[Auth] Error during authentication:", err);
+          return res.status(500).json({ 
+            message: "Authentication failed", 
+            error: err.message 
+          });
+        }
+        
+        if (!user) {
+          console.error("[Auth] No user returned from authentication, info:", info);
+          return res.redirect("/api/login");
+        }
+        
+        req.logIn(user, (loginErr) => {
+          if (loginErr) {
+            console.error("[Auth] Error during login:", loginErr);
+            return res.status(500).json({ 
+              message: "Login failed", 
+              error: loginErr.message 
+            });
+          }
+          
+          console.log("[Auth] Login successful, redirecting to /");
+          return res.redirect("/");
+        });
+      })(req, res, next);
+    } catch (error: any) {
+      console.error("[Auth] Error in /api/callback:", error);
+      res.status(500).json({ 
+        message: "Callback error", 
+        error: error.message 
+      });
+    }
   });
 
   app.get("/api/logout", (req, res) => {
