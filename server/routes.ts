@@ -665,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       
       // Return users with sensitive data removed
-      const sanitizedUsers = users.map(user => ({
+      const sanitizedUsers = users.map((user: User) => ({
         id: user.id,
         email: user.email,
         firstName: user.firstName,
@@ -751,13 +751,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const users = await storage.getAllUsers();
       const totalUsers = users.length;
-      const freeUsers = users.filter(u => u.plan === 'free').length;
-      const proUsers = users.filter(u => u.plan === 'pro').length;
-      const teamUsers = users.filter(u => u.plan === 'team').length;
+      const freeUsers = users.filter((u: User) => u.plan === 'free').length;
+      const proUsers = users.filter((u: User) => u.plan === 'pro').length;
+      const teamUsers = users.filter((u: User) => u.plan === 'team').length;
       
       // Calculate total credits distributed
-      const totalCredits = users.reduce((sum, u) => sum + (u.aiCreditsBalance || 0), 0);
-      const totalCreditsUsed = users.reduce((sum, u) => sum + (u.aiCreditsUsed || 0), 0);
+      const totalCredits = users.reduce((sum: number, u: User) => sum + (u.aiCreditsBalance || 0), 0);
+      const totalCreditsUsed = users.reduce((sum: number, u: User) => sum + (u.aiCreditsUsed || 0), 0);
 
       res.json({
         users: {

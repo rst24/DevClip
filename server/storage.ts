@@ -27,9 +27,11 @@ export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   updateUserPlan(userId: string, plan: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User>;
   updateUserCredits(userId: string, creditsBalance: number, creditsUsed?: number): Promise<User>;
+  updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined>;
   deductCredits(userId: string, amount: number): Promise<User>;
   refreshMonthlyCredits(userId: string): Promise<User>;
   
@@ -210,6 +212,22 @@ export class PostgresStorage implements IStorage {
       .returning();
     
     return updatedUser;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const [user] = await db.update(users)
+      .set({
+        isAdmin,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
   }
 
   // Clipboard operations
