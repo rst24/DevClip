@@ -86,10 +86,10 @@ All v1 endpoints:
 - POST `/api/webhooks/stripe` - Stripe webhook handler (public, signature verified)
 
 ### Frontend Pages
-- `/login` - Login page
-- `/signup` - Signup page
+- `/login` - Redirects to Replit Auth SSO
+- `/signup` - Redirects to Replit Auth SSO  
 - `/docs` - API documentation with endpoint specs, code examples, authentication guide
-- `/` - Dashboard (protected) with tabs:
+- `/` - Landing page (unauthenticated) or Dashboard (authenticated) with tabs:
   - History: Clipboard items with search and favorites
   - Formatters: Local text formatting tools
   - Analytics: Usage analytics with recharts (30-day time series, operation breakdown, CSV export) - Authenticated only
@@ -141,7 +141,18 @@ All v1 endpoints:
 - `npm run db:push` - Push Drizzle schema changes to database
 - `npx tsx server/setup-stripe.ts` - Create Stripe products/prices
 
-## Recent Changes (October 24, 2025)
+## Recent Changes
+
+### Pre-Launch Polish (October 24, 2025 - Session 2)
+1. ✅ **Authentication Modernization**: Replaced custom email/password login/signup with Replit Auth SSO supporting Google, GitHub, Apple, and X login providers
+2. ✅ **UX Enhancement**: Fixed duplicate download button by implementing smooth scroll from hero CTA to installation section
+3. ✅ **SEO Optimization**: Added comprehensive Open Graph and Twitter Card meta tags for better social sharing and search visibility
+4. ✅ **Environment Documentation**: Documented all required environment variables (Replit Auth, Stripe, database) with setup instructions
+5. ✅ **Production Verification**: Verified Stripe webhook signature verification and error tracking middleware are production-ready
+6. ✅ **E2E Testing**: Passed comprehensive e2e tests for landing page, API docs, and anonymous dashboard access
+7. ✅ **Mobile Responsiveness**: Confirmed all pages use responsive Tailwind classes and Shadcn components
+
+### Phase 1 Foundation (October 24, 2025 - Session 1)
 1. ✅ Migrated from in-memory storage to PostgreSQL with Drizzle ORM
 2. ✅ Implemented full authentication system (signup/login/logout/sessions)
 3. ✅ Added protected routes with session-based auth
