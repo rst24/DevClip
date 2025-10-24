@@ -60,7 +60,7 @@ export default function Landing() {
                 </h1>
                 <p className="text-xl text-muted-foreground">
                   Browser extension with local JSON, YAML, SQL formatters + AI-powered code tools. 
-                  Format instantly, explain code, refactor with GPT-4.
+                  Format instantly, explain code, refactor with GPT-5 (Nano/Mini/Premium).
                 </p>
               </div>
 

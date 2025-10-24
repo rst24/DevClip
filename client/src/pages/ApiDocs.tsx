@@ -289,7 +289,7 @@ print(data['result'])`}</pre>
               <Badge variant="secondary">1 credit</Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Explain code or text using AI (GPT-4o-mini)
+              Explain code or text using AI (model tier based on your plan)
             </p>
 
             <h4 className="font-medium text-sm mb-2">Request Body</h4>
