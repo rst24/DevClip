@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlanBadge } from "@/components/PlanBadge";
 import { ClipboardCard } from "@/components/ClipboardCard";
-import { FormattersPanel } from "@/components/FormattersPanel";
-import { AiActionsPanel } from "@/components/AiActionsPanel";
-import { SettingsPanel } from "@/components/SettingsPanel";
-import { FeedbackForm } from "@/components/FeedbackForm";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Analytics } from "@/components/Analytics";
+
+// Lazy load heavy components for code splitting
+const FormattersPanel = lazy(() => import("@/components/FormattersPanel").then(m => ({ default: m.FormattersPanel })));
+const AiActionsPanel = lazy(() => import("@/components/AiActionsPanel").then(m => ({ default: m.AiActionsPanel })));
+const SettingsPanel = lazy(() => import("@/components/SettingsPanel").then(m => ({ default: m.SettingsPanel })));
+const FeedbackForm = lazy(() => import("@/components/FeedbackForm").then(m => ({ default: m.FeedbackForm })));
+const Analytics = lazy(() => import("@/components/Analytics").then(m => ({ default: m.Analytics })));
 import { 
   History, 
   Wand2, 
@@ -452,50 +454,74 @@ export default function Dashboard() {
 
           {/* Formatters */}
           <TabsContent value="formatters">
-            <FormattersPanel onSaveToHistory={handleSaveFormattedToHistory} />
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }>
+              <FormattersPanel onSaveToHistory={handleSaveFormattedToHistory} />
+            </Suspense>
           </TabsContent>
 
           {/* Analytics - Authenticated only */}
           {isAuthenticated && (
             <TabsContent value="analytics">
-              <Analytics />
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }>
+                <Analytics />
+              </Suspense>
             </TabsContent>
           )}
 
           {/* Settings - Authenticated only */}
           {isAuthenticated && user && (
             <TabsContent value="settings">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <SettingsPanel
-                    user={{
-                      email: user.email,
-                      username: user.username,
-                      plan: user.plan as "free" | "pro" | "team",
-                      aiCredits: user.aiCreditsBalance,
-                    }}
-                    onUpgrade={() => setUpgradeModalOpen(true)}
-                    onManageBilling={handleManageBilling}
-                  />
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-                <div>
-                  <AiActionsPanel
-                    onAiAction={handleAiAction}
-                    plan={user.plan as "free" | "pro" | "team"}
-                    credits={user.aiCreditsBalance}
-                    onUpgrade={() => setUpgradeModalOpen(true)}
-                  />
+              }>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
+                    <SettingsPanel
+                      user={{
+                        email: user.email,
+                        username: user.username,
+                        plan: user.plan as "free" | "pro" | "team",
+                        aiCredits: user.aiCreditsBalance,
+                      }}
+                      onUpgrade={() => setUpgradeModalOpen(true)}
+                      onManageBilling={handleManageBilling}
+                    />
+                  </div>
+                  <div>
+                    <AiActionsPanel
+                      onAiAction={handleAiAction}
+                      plan={user.plan as "free" | "pro" | "team"}
+                      credits={user.aiCreditsBalance}
+                      onUpgrade={() => setUpgradeModalOpen(true)}
+                    />
+                  </div>
                 </div>
-              </div>
+              </Suspense>
             </TabsContent>
           )}
 
           {/* Feedback - Authenticated only */}
           {isAuthenticated && (
             <TabsContent value="feedback">
-              <div className="max-w-2xl mx-auto">
-                <FeedbackForm onSubmit={handleFeedback} />
-              </div>
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }>
+                <div className="max-w-2xl mx-auto">
+                  <FeedbackForm onSubmit={handleFeedback} />
+                </div>
+              </Suspense>
             </TabsContent>
           )}
         </Tabs>

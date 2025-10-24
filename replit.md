@@ -20,6 +20,7 @@ DevClip is a developer-focused clipboard management tool with a React frontend a
 - **ai_operations**: Tracking of AI operations for analytics
 - **feedback**: User feedback submissions
 - **api_keys**: API keys for browser extension and external integrations (userId, key, name, createdAt, lastUsedAt, revokedAt)
+- **error_logs**: Error tracking with endpoint, method, statusCode, errorMessage, errorStack, requestBody (redacted), userAgent, ipAddress
 
 ### Authentication Flow
 1. Users sign up with email/username/password (validated with Zod)
@@ -135,6 +136,7 @@ All v1 endpoints:
 14. ✅ **Browser Extension (Manifest V3)**: Complete extension structure with popup UI (local formatters + AI tools), background service worker, options page for API key config, clipboard integration (requires PNG icons for deployment)
 15. ✅ **Usage Analytics Dashboard**: Analytics tab with recharts showing 30-day time series (zero-filled), operations by type, credits by type, recent operations list, CSV export
 16. ✅ **Database Optimization**: Added performance indexes on clipboard_items (userId, createdAt), ai_operations (userId, createdAt, composite), feedback (userId), team_members (teamOwnerId, memberId), conversion_events (userId, eventType)
+17. ✅ **Error Tracking & Monitoring**: Implemented error_logs table with recursive sensitive data redaction (handles camelCase/snake_case passwords, tokens, secrets, API keys), positioned error middleware last in chain to capture all errors, includes retry logic for transient failures
 
 ## Known Limitations / Production Considerations
 1. **Session Store**: Currently using memorystore (in-memory) which is not suitable for production. Should migrate to PostgreSQL-backed sessions or Redis.
@@ -144,7 +146,7 @@ All v1 endpoints:
 5. **Error Handling**: Some edge cases in webhook handling need more robust error recovery.
 
 ## Strategic Roadmap
-**Phase 1: Extension & API** (Current - 89% Complete)
+**Phase 1: Extension & API** (Current - 94% Complete)
 - ✅ REST API v1 with formatter and AI endpoints
 - ✅ API key management system
 - ✅ Browser extension (Manifest V3) for Chrome/Edge
@@ -152,13 +154,13 @@ All v1 endpoints:
 - ✅ Tier-based API key limits (Free: 0, Pro: 3, Team: unlimited)
 - ✅ Usage analytics dashboard with recharts
 - ✅ Database query optimization (indexes)
+- ✅ Error tracking and monitoring
 
 **Phase 2: Optimization & Growth**
-- Database performance optimization
+- Frontend bundle optimization (code splitting, lazy loading)
 - Landing page redesign (extension-first)
 - Chrome Web Store listing assets
 - Usage alerts and notifications
-- Error tracking and monitoring
 
 **Phase 3: Enterprise Features**
 - Team API key sharing
