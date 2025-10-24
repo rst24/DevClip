@@ -6,7 +6,7 @@ import { Sparkles, Wand2, Cloud, Zap, Code, Lock, Download, Chrome, ExternalLink
 
 export default function Landing() {
   const handleSignIn = () => {
-    window.location.href = "/auth/replit";
+    window.location.href = "/api/login";
   };
 
   const handleTryFormatters = () => {
