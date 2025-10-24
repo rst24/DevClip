@@ -28,7 +28,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-09-30.clover",
 });
 
 // Stripe Price IDs
@@ -301,21 +301,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Team tier: unlimited (no check needed)
       
-      // Generate new API key
-      const { generateApiKey } = await import("./apiKeyUtils");
-      const apiKey = generateApiKey();
-      
-      const newKey = await storage.createApiKey({
-        userId,
-        key: apiKey,
-        name: name.trim(),
-      });
+      // Generate new API key (storage.createApiKey generates the key internally)
+      const newKey = await storage.createApiKey(userId, name.trim());
       
       // Return the key once (user must save it)
       res.json({ 
         id: newKey.id,
         name: newKey.name,
-        key: apiKey,
+        key: newKey.key,
         createdAt: newKey.createdAt,
         message: "Save this key securely - it won't be shown again"
       });
@@ -336,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: k.name,
         keyPreview: `***${k.key.slice(-4)}`,
         createdAt: k.createdAt,
-        lastUsedAt: k.lastUsedAt,
+        lastUsed: k.lastUsed,
         revokedAt: k.revokedAt,
       }));
       
@@ -350,9 +343,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/keys/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const keyId = parseInt(req.params.id);
+      const keyId = req.params.id;
       
-      if (isNaN(keyId)) {
+      if (!keyId) {
         return res.status(400).json({ message: "Invalid key ID" });
       }
       

@@ -391,7 +391,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button 
                 size="lg" 
-                onClick={handleDownloadExtension}
+                onClick={handleScrollToExtension}
                 data-testid="button-cta-extension"
               >
                 <Chrome className="mr-2 h-4 w-4" />
