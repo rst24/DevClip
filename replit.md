@@ -106,13 +106,35 @@ All v1 endpoints:
 - **Note**: Requires proper PNG icons (16x16, 48x48, 128x128) to load in Chrome
 
 ## Environment Variables
-- `DATABASE_URL` - PostgreSQL connection string (Neon)
-- `SESSION_SECRET` - Express session secret
-- `STRIPE_SECRET_KEY` - Stripe API key (live or test)
-- `STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan
-- `STRIPE_TEAM_PRICE_ID` - Stripe price ID for Team plan
-- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
-- `VITE_STRIPE_PUBLIC_KEY` - Stripe publishable key for frontend
+
+### Required for Development and Production
+- `DATABASE_URL` - PostgreSQL connection string (Neon-backed Replit database)
+- `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` - PostgreSQL connection details (auto-configured by Replit)
+- `SESSION_SECRET` - Express session secret for authentication (auto-configured by Replit)
+- `REPL_ID` - Replit project ID for OIDC (auto-configured by Replit)
+- `REPLIT_DOMAINS` - Comma-separated domains for Replit Auth (auto-configured by Replit)
+- `ISSUER_URL` - OIDC issuer URL (defaults to https://replit.com/oidc)
+
+### Stripe Payment Processing (Required for Production)
+- `STRIPE_SECRET_KEY` - Stripe API secret key (get from Stripe dashboard)
+  - **Development**: Use test mode key starting with `sk_test_...`
+  - **Production**: Use live mode key starting with `sk_live_...`
+- `STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan ($10/month)
+  - Create in Stripe dashboard → Products → Create product → Add pricing
+- `STRIPE_TEAM_PRICE_ID` - Stripe price ID for Team plan ($49/month)
+  - Create in Stripe dashboard → Products → Create product → Add pricing
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (for webhook verification)
+  - Create webhook endpoint in Stripe dashboard → Developers → Webhooks
+  - Add endpoint URL: `https://your-domain.replit.app/api/webhooks/stripe`
+  - Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- `VITE_STRIPE_PUBLIC_KEY` - Stripe publishable key for frontend (pk_test_... or pk_live_...)
+
+### Testing Stripe Keys (Development Only)
+- `TESTING_STRIPE_SECRET_KEY` - Test mode Stripe secret key
+- `TESTING_VITE_STRIPE_PUBLIC_KEY` - Test mode Stripe publishable key
+
+### Optional / Future
+- `NODE_ENV` - Environment (development/production) - auto-set by Replit
 
 ## Development Commands
 - `npm run dev` - Start development server (backend + frontend)
