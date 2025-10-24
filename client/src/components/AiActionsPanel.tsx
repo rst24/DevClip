@@ -37,20 +37,23 @@ const aiActions = [
   },
 ];
 
+// AI model tier mapping
+const AI_MODEL_TIERS = {
+  free: { model: "GPT-5 Nano", description: "Fast, efficient AI" },
+  pro: { model: "GPT-5 Mini", description: "Balanced quality & speed" },
+  team: { model: "GPT-5", description: "Premium AI quality" },
+};
+
 export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActionsPanelProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const canUseAi = plan !== "free" && credits > 0;
+  const canUseAi = credits > 0; // All tiers can use AI if they have credits
+  const modelTier = AI_MODEL_TIERS[plan];
 
   const handleAiAction = async (operation: string) => {
-    if (plan === "free") {
-      onUpgrade();
-      return;
-    }
-
     if (!input.trim()) {
       toast({
         title: "No input",
@@ -111,16 +114,23 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
       <div>
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold">AI-Powered Tools</h2>
-          {plan !== "free" && (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" data-testid="badge-ai-model">
+              <Sparkles className="h-3 w-3 mr-1" />
+              {modelTier.model}
+            </Badge>
             <Badge variant="outline" data-testid="badge-credits">
               {credits} credits
             </Badge>
-          )}
+          </div>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          {plan === "free" 
-            ? "Upgrade to Pro to unlock AI features" 
-            : "GPT-4o-mini powered code analysis and summarization"}
+          {`${modelTier.model} - ${modelTier.description}`}
+          {plan === "free" && (
+            <span className="block mt-1 text-xs">
+              Upgrade to Pro or Team for better AI models and more credits
+            </span>
+          )}
         </p>
       </div>
 
@@ -139,11 +149,6 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
               onClick={() => !disabled && handleAiAction(action.id)}
               data-testid={`button-ai-${action.id}`}
             >
-              {plan === "free" && (
-                <div className="absolute top-2 right-2">
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </div>
-              )}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Icon className="h-4 w-4 text-primary" />

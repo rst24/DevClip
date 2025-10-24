@@ -127,6 +127,40 @@ export default function ApiDocs() {
           </div>
         </Card>
 
+        {/* AI Model Tiers */}
+        <Card className="p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">AI Model Tiers</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            DevClip uses different GPT-5 models based on your subscription plan, providing clear value at each tier.
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Badge variant="outline" className="mt-0.5">Free</Badge>
+              <div>
+                <p className="text-sm font-medium">GPT-5 Nano</p>
+                <p className="text-xs text-muted-foreground">Fast, efficient AI - perfect for 50 credits/month</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Badge variant="outline" className="mt-0.5">Pro</Badge>
+              <div>
+                <p className="text-sm font-medium">GPT-5 Mini</p>
+                <p className="text-xs text-muted-foreground">Balanced quality & speed - ideal for 5,000 credits/month</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Badge variant="outline" className="mt-0.5">Team</Badge>
+              <div>
+                <p className="text-sm font-medium">GPT-5 (Premium)</p>
+                <p className="text-xs text-muted-foreground">Best AI quality - for 25,000 credits/month</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            <strong>Note:</strong> The AI model is automatically selected based on your API key's associated plan. No configuration needed.
+          </p>
+        </Card>
+
         {/* Endpoints */}
         <Card className="p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

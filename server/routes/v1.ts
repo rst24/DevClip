@@ -133,9 +133,11 @@ router.post("/ai/explain", authenticateApiKey, async (req: ApiKeyRequest, res: R
       });
     }
 
-    // Call AI service (using existing integration)
+    // Call AI service with tier-specific model
     const { processAiRequest } = await import("../ai");
-    const result = await processAiRequest(text, "explain");
+    const { getModelForPlan } = await import("../openai");
+    const model = getModelForPlan(user.plan as "free" | "pro" | "team");
+    const result = await processAiRequest(text, "explain", model);
 
     // Deduct credits and update cached user
     const updatedUser = await storage.deductCredits(user.id, creditCost);
@@ -200,8 +202,11 @@ router.post("/ai/refactor", authenticateApiKey, async (req: ApiKeyRequest, res: 
       });
     }
 
+    // Call AI service with tier-specific model
     const { processAiRequest } = await import("../ai");
-    const result = await processAiRequest(text, "refactor");
+    const { getModelForPlan } = await import("../openai");
+    const model = getModelForPlan(user.plan as "free" | "pro" | "team");
+    const result = await processAiRequest(text, "refactor", model);
 
     // Deduct credits and update cached user
     const updatedUser = await storage.deductCredits(user.id, creditCost);
@@ -266,8 +271,11 @@ router.post("/ai/summarize", authenticateApiKey, async (req: ApiKeyRequest, res:
       });
     }
 
+    // Call AI service with tier-specific model
     const { processAiRequest } = await import("../ai");
-    const result = await processAiRequest(text, "summarize");
+    const { getModelForPlan } = await import("../openai");
+    const model = getModelForPlan(user.plan as "free" | "pro" | "team");
+    const result = await processAiRequest(text, "summarize", model);
 
     // Deduct credits and update cached user
     const updatedUser = await storage.deductCredits(user.id, creditCost);

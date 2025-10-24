@@ -1,4 +1,4 @@
-import { openai, AI_MODEL, MAX_TOKENS } from "./openai";
+import { openai, MAX_TOKENS } from "./openai";
 
 const systemPrompts: Record<string, string> = {
   explain: "You are a helpful code assistant. Explain the following code or text clearly and concisely.",
@@ -6,11 +6,15 @@ const systemPrompts: Record<string, string> = {
   refactor: "You are an expert code reviewer. Suggest improvements and refactor the following code. Provide clean, optimized code."
 };
 
-export async function processAiRequest(text: string, operation: string): Promise<string> {
+export async function processAiRequest(
+  text: string, 
+  operation: string, 
+  model: string
+): Promise<string> {
   const systemPrompt = systemPrompts[operation] || systemPrompts.explain;
   
   const completion = await openai.chat.completions.create({
-    model: AI_MODEL,
+    model,
     max_tokens: MAX_TOKENS,
     messages: [
       { role: "system", content: systemPrompt },
@@ -22,11 +26,15 @@ export async function processAiRequest(text: string, operation: string): Promise
   return result;
 }
 
-export async function processAiRequestWithMetadata(text: string, operation: string) {
+export async function processAiRequestWithMetadata(
+  text: string, 
+  operation: string,
+  model: string
+) {
   const systemPrompt = systemPrompts[operation] || systemPrompts.explain;
   
   const completion = await openai.chat.completions.create({
-    model: AI_MODEL,
+    model,
     max_tokens: MAX_TOKENS,
     messages: [
       { role: "system", content: systemPrompt },

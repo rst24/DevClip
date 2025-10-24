@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { openai, AI_MODEL, MAX_TOKENS } from "./openai";
+import { openai, getModelForPlan, MAX_TOKENS } from "./openai";
 import { 
   formatJson, 
   formatYaml, 
@@ -167,8 +167,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         refactor: "You are an expert code reviewer. Suggest improvements and refactor the following code. Provide clean, optimized code."
       };
       
+      // Use tier-specific AI model based on user's plan
+      const model = getModelForPlan(user.plan as "free" | "pro" | "team");
+      
       const completion = await openai.chat.completions.create({
-        model: AI_MODEL,
+        model,
         max_tokens: MAX_TOKENS,
         messages: [
           { role: "system", content: systemPrompts[data.operation] },
