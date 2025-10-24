@@ -186,6 +186,31 @@ export const conversionEvents = pgTable(
 
 export type ConversionEvent = typeof conversionEvents.$inferSelect;
 
+// Error logs for monitoring and debugging
+export const errorLogs = pgTable(
+  "error_logs",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id"), // NULL if error occurred before auth
+    endpoint: text("endpoint").notNull(), // API route that failed
+    method: text("method").notNull(), // GET, POST, PUT, DELETE
+    statusCode: integer("status_code").notNull(), // HTTP status code
+    errorMessage: text("error_message").notNull(),
+    errorStack: text("error_stack"), // Stack trace for debugging
+    requestBody: jsonb("request_body"), // Request data for reproduction
+    userAgent: text("user_agent"),
+    ipAddress: text("ip_address"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_error_logs_user_id").on(table.userId),
+    index("idx_error_logs_endpoint").on(table.endpoint),
+    index("idx_error_logs_created_at").on(table.createdAt),
+  ],
+);
+
+export type ErrorLog = typeof errorLogs.$inferSelect;
+
 // Zod schemas for API requests
 export const formatRequestSchema = z.object({
   text: z.string(),

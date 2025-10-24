@@ -10,6 +10,7 @@ import {
   type TeamMember,
   type ApiKey,
   type ConversionEvent,
+  type ErrorLog,
   users,
   clipboardItems,
   aiOperations,
@@ -17,6 +18,7 @@ import {
   teamMembers,
   apiKeys,
   conversionEvents,
+  errorLogs,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull } from "drizzle-orm";
@@ -58,6 +60,19 @@ export interface IStorage {
   
   // A/B testing
   logConversionEvent(userId: string, eventType: string, metadata?: any): Promise<ConversionEvent>;
+  
+  // Error logging
+  createErrorLog(errorData: {
+    userId: string | null;
+    endpoint: string;
+    method: string;
+    statusCode: number;
+    errorMessage: string;
+    errorStack: string | null;
+    requestBody: any;
+    userAgent: string | null;
+    ipAddress: string | null;
+  }): Promise<ErrorLog>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -331,6 +346,24 @@ export class PostgresStorage implements IStorage {
       })
       .returning();
     return event;
+  }
+  
+  // Error logging
+  async createErrorLog(errorData: {
+    userId: string | null;
+    endpoint: string;
+    method: string;
+    statusCode: number;
+    errorMessage: string;
+    errorStack: string | null;
+    requestBody: any;
+    userAgent: string | null;
+    ipAddress: string | null;
+  }): Promise<ErrorLog> {
+    const [log] = await db.insert(errorLogs)
+      .values(errorData)
+      .returning();
+    return log;
   }
 }
 
