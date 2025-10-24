@@ -60,11 +60,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Extension download
-  app.get("/api/download/extension", (req, res) => {
+  app.get("/api/download/extension", async (req, res) => {
     try {
       const extensionPath = path.join(process.cwd(), 'extension');
+      
+      // Check if extension directory exists
+      const fs = await import('fs/promises');
+      try {
+        await fs.access(extensionPath);
+      } catch (err) {
+        console.error('Extension directory not found:', extensionPath);
+        return res.status(404).json({ message: 'Extension files not available' });
+      }
+
       const archive = archiver('zip', {
         zlib: { level: 9 } // Maximum compression
+      });
+
+      // Register error handler before piping to catch all errors
+      archive.on('error', (err) => {
+        console.error('Archive error during extension download:', err);
+        // Destroy the stream to prevent partial downloads
+        archive.destroy();
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Failed to create extension archive' });
+        }
       });
 
       // Set download headers
@@ -78,15 +98,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       archive.directory(extensionPath, false);
 
       // Finalize the archive
-      archive.finalize();
-
-      archive.on('error', (err) => {
-        console.error('Archive error:', err);
-        res.status(500).json({ message: 'Failed to create extension archive' });
-      });
+      await archive.finalize();
+      
+      console.log('Extension download completed successfully');
     } catch (error: any) {
       console.error('Extension download error:', error);
-      res.status(500).json({ message: 'Failed to download extension' });
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to download extension' });
+      }
     }
   });
 
