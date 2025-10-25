@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileJson, FileCode, Database, Eraser, FileText } from "lucide-react";
+import { FileJson, FileCode, Database, Eraser, FileText, Code2, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -11,6 +12,7 @@ import {
   stripAnsi, 
   logToMarkdown 
 } from "@/lib/formatters";
+import { formatCode, detectLanguage, supportedLanguages } from "@/lib/universalFormatter";
 
 interface FormattersPanelProps {
   onSaveToHistory?: (content: string, contentType: string) => void;
@@ -24,10 +26,18 @@ const formatters = [
   { id: "log-to-markdown", label: "Log→MD", icon: FileText, description: "Convert logs to Markdown" },
 ];
 
+const universalFormatter = {
+  id: "auto",
+  label: "Smart Format",
+  icon: Sparkles,
+  description: "Auto-detect & format any code (20+ languages)",
+};
+
 export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [detectedLang, setDetectedLang] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleFormat = async (formatType: string) => {
@@ -44,25 +54,42 @@ export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
     try {
       let result: string;
       
-      // All formatting happens locally in the browser
-      switch (formatType) {
-        case "json":
-          result = formatJson(input);
-          break;
-        case "yaml":
-          result = formatYaml(input);
-          break;
-        case "sql":
-          result = formatSql(input);
-          break;
-        case "ansi-clean":
-          result = stripAnsi(input);
-          break;
-        case "log-to-markdown":
-          result = logToMarkdown(input);
-          break;
-        default:
-          throw new Error("Unknown format type");
+      // Universal formatter with auto-detection
+      if (formatType === "auto") {
+        const language = detectLanguage(input);
+        setDetectedLang(language);
+        result = await formatCode(input, language);
+        
+        toast({
+          title: "Formatted successfully",
+          description: `Detected ${language.toUpperCase()} and formatted locally`,
+        });
+      } else {
+        // Legacy formatters
+        switch (formatType) {
+          case "json":
+            result = formatJson(input);
+            break;
+          case "yaml":
+            result = formatYaml(input);
+            break;
+          case "sql":
+            result = formatSql(input);
+            break;
+          case "ansi-clean":
+            result = stripAnsi(input);
+            break;
+          case "log-to-markdown":
+            result = logToMarkdown(input);
+            break;
+          default:
+            throw new Error("Unknown format type");
+        }
+        
+        toast({
+          title: "Formatted successfully",
+          description: `Applied ${formatType} formatting locally`,
+        });
       }
       
       setOutput(result);
@@ -71,11 +98,6 @@ export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
       if (onSaveToHistory) {
         onSaveToHistory(result, formatType);
       }
-      
-      toast({
-        title: "Formatted successfully",
-        description: `Applied ${formatType} formatting locally`,
-      });
     } catch (error) {
       toast({
         title: "Format failed",
@@ -96,7 +118,7 @@ export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold mb-2">Local Formatters</h2>
         <p className="text-sm text-muted-foreground mb-4">
@@ -104,23 +126,60 @@ export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        {formatters.map((formatter) => {
-          const Icon = formatter.icon;
-          return (
-            <Button
-              key={formatter.id}
-              variant="outline"
-              className="flex-col h-auto py-3 gap-2"
-              onClick={() => handleFormat(formatter.id)}
-              disabled={loading || !input.trim()}
-              data-testid={`button-format-${formatter.id}`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{formatter.label}</span>
-            </Button>
-          );
-        })}
+      {/* Universal Smart Formatter */}
+      <Card className="p-4 border-primary/20">
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold">{universalFormatter.label}</h3>
+              <Badge variant="secondary" className="text-xs">New</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              {universalFormatter.description}
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {supportedLanguages.slice(0, 8).map((lang) => (
+                <Badge key={lang.id} variant="outline" className="text-xs">
+                  {lang.label}
+                </Badge>
+              ))}
+              <Badge variant="outline" className="text-xs">+{supportedLanguages.length - 8} more</Badge>
+            </div>
+          </div>
+          <Button
+            size="lg"
+            onClick={() => handleFormat("auto")}
+            disabled={loading || !input.trim()}
+            data-testid="button-format-auto"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Format
+          </Button>
+        </div>
+      </Card>
+
+      {/* Legacy Formatters */}
+      <div>
+        <h3 className="text-sm font-medium mb-3 text-muted-foreground">Quick Formatters</h3>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          {formatters.map((formatter) => {
+            const Icon = formatter.icon;
+            return (
+              <Button
+                key={formatter.id}
+                variant="outline"
+                className="flex-col h-auto py-3 gap-2"
+                onClick={() => handleFormat(formatter.id)}
+                disabled={loading || !input.trim()}
+                data-testid={`button-format-${formatter.id}`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-xs font-medium">{formatter.label}</span>
+              </Button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -137,7 +196,14 @@ export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Output</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Output</label>
+              {detectedLang && (
+                <Badge variant="secondary" className="text-xs">
+                  {detectedLang.toUpperCase()}
+                </Badge>
+              )}
+            </div>
             {output && (
               <Button
                 size="sm"
