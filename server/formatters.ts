@@ -77,40 +77,39 @@ export function logToMarkdown(text: string): string {
   return markdown;
 }
 
-// Universal code formatter with auto-detection
+// Universal code formatter with auto-detection (matching client-side capabilities)
 export type SupportedLanguage = 
   | "javascript" | "typescript" | "jsx" | "tsx"
   | "html" | "css" | "scss" | "less"
   | "json" | "yaml" 
   | "markdown" | "graphql"
-  | "php" | "ruby" | "xml" | "java" | "go";
+  | "vue";
 
-// Language detection patterns
+// Language detection patterns (matching client-side)
 const languagePatterns: Record<string, RegExp> = {
-  typescript: /^(import|export|interface|type|enum|namespace|as|declare)/m,
+  vue: /^<template[\s>]|<script[\s>]|<style[\s>]/i,
+  // TypeScript: Check for TS-specific syntax (type annotations, generics, decorators, keywords)
+  typescript: /:\s*(?:string|number|boolean|any|void|never|unknown|object|Array|Promise|Record|Partial|Required)<|<[A-Z]\w*>|interface\s+\w+|type\s+\w+\s*=|enum\s+\w+|@Component|@NgModule|@Injectable|@Directive|@Pipe|import\s+(?:type\s+)?{|export\s+(?:type\s+|interface\s+|enum\s+)|as\s+(?:const|any)|declare\s+/,
   tsx: /^(import.*from|export.*|interface|type).*<[A-Z]/m,
   jsx: /<[A-Z][a-z]*[\s>]/,
   html: /^<!DOCTYPE html>|<html|<head|<body|<div|<span|<p|<a/i,
-  css: /\{[^}]*:[^}]*\}|@media|@keyframes|\.[\w-]+\s*\{/,
   scss: /\$[\w-]+:|@mixin|@include|@extend|&:/,
+  less: /@[\w-]+:|\.[\w-]+\s*\{.*&:/,
+  css: /\{[^}]*:[^}]*\}|@media|@keyframes|\.[\w-]+\s*\{/,
   json: /^\s*[\{\[]/,
   yaml: /^[\w-]+:\s*[\w-]|^\s*-\s+[\w]/m,
   markdown: /^#{1,6}\s+|^\*\*|^```|^\[.*\]\(.*\)/m,
   graphql: /^(query|mutation|subscription|fragment|type|interface|enum|input|schema)/m,
-  php: /^<\?php|namespace|use|class|function|public|private|protected/m,
-  ruby: /^(def|class|module|require|include|end|do|if|unless)\s+/m,
-  xml: /^<\?xml|<[\w-]+.*>/,
-  java: /^(public|private|protected|class|interface|import|package)\s+/m,
-  go: /^(package|import|func|type|var|const)\s+/m,
   javascript: /^(import|export|const|let|var|function|class|=>|\{|\[)/m,
 };
 
 function detectLanguage(code: string): SupportedLanguage {
   const trimmed = code.trim();
   
-  // Check patterns in order of specificity
-  if (languagePatterns.typescript.test(trimmed) && !trimmed.includes('<')) {
-    return "typescript";
+  // Check patterns in order of specificity (matching client-side logic)
+  // Note: Order matters - more specific patterns first
+  if (languagePatterns.vue.test(trimmed)) {
+    return "vue";
   }
   if (languagePatterns.tsx.test(trimmed)) {
     return "tsx";
@@ -118,11 +117,17 @@ function detectLanguage(code: string): SupportedLanguage {
   if (languagePatterns.jsx.test(trimmed)) {
     return "jsx";
   }
+  if (languagePatterns.typescript.test(trimmed)) {
+    return "typescript";
+  }
   if (languagePatterns.html.test(trimmed)) {
     return "html";
   }
   if (languagePatterns.scss.test(trimmed)) {
     return "scss";
+  }
+  if (languagePatterns.less.test(trimmed)) {
+    return "less";
   }
   if (languagePatterns.css.test(trimmed)) {
     return "css";
@@ -132,7 +137,7 @@ function detectLanguage(code: string): SupportedLanguage {
       JSON.parse(trimmed);
       return "json";
     } catch {
-      // Not valid JSON
+      // Not valid JSON, continue detection
     }
   }
   if (languagePatterns.yaml.test(trimmed)) {
@@ -144,25 +149,11 @@ function detectLanguage(code: string): SupportedLanguage {
   if (languagePatterns.graphql.test(trimmed)) {
     return "graphql";
   }
-  if (languagePatterns.php.test(trimmed)) {
-    return "php";
-  }
-  if (languagePatterns.ruby.test(trimmed)) {
-    return "ruby";
-  }
-  if (languagePatterns.xml.test(trimmed)) {
-    return "xml";
-  }
-  if (languagePatterns.java.test(trimmed)) {
-    return "java";
-  }
-  if (languagePatterns.go.test(trimmed)) {
-    return "go";
-  }
   if (languagePatterns.javascript.test(trimmed)) {
     return "javascript";
   }
   
+  // Default to JavaScript if no pattern matches
   return "javascript";
 }
 
@@ -170,7 +161,7 @@ export async function formatCode(code: string, language?: SupportedLanguage): Pr
   try {
     const detectedLanguage = language || detectLanguage(code);
     
-    // Map language to Prettier parser
+    // Map language to Prettier parser (matching client-side capabilities)
     const parserMap: Record<SupportedLanguage, string> = {
       javascript: "babel",
       typescript: "typescript",
@@ -184,11 +175,7 @@ export async function formatCode(code: string, language?: SupportedLanguage): Pr
       yaml: "yaml",
       markdown: "markdown",
       graphql: "graphql",
-      php: "php",
-      ruby: "ruby",
-      xml: "xml",
-      java: "java",
-      go: "go-template",
+      vue: "vue",
     };
     
     const parser = parserMap[detectedLanguage];
@@ -203,13 +190,6 @@ export async function formatCode(code: string, language?: SupportedLanguage): Pr
       trailingComma: "es5",
       bracketSpacing: true,
       arrowParens: "always",
-      plugins: [
-        "@prettier/plugin-php",
-        "@prettier/plugin-ruby",
-        "@prettier/plugin-xml",
-        "prettier-plugin-java",
-        "prettier-plugin-go-template",
-      ],
     });
     
     return {

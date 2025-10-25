@@ -27,10 +27,15 @@ DevClip is built with a React 18, TypeScript, Vite, Tailwind CSS, and shadcn/ui 
 - **Tiered AI Models**: Backend dynamically selects OpenAI models (GPT-5 Nano/Mini/Premium) based on user's subscription tier.
 
 **Feature Specifications:**
-- **Local Formatters**: JSON, YAML, SQL prettify, ANSI strip, log-to-markdown.
+- **Universal Code Formatter** (NEW - October 2025): Smart auto-detection and formatting for 13 programming languages using Prettier:
+  - **Web Languages**: JavaScript, TypeScript (includes Angular), JSX, TSX, HTML, CSS, SCSS, Less, Vue
+  - **Data Formats**: JSON, YAML, GraphQL
+  - **Documents**: Markdown
+  - Features: Auto-detection of language from code patterns, client-side formatting (web app), server-side API support, language badge display
+- **Legacy Formatters**: JSON, YAML, SQL prettify, ANSI strip, log-to-markdown (maintained for backward compatibility).
 - **AI Operations**: Code explanation, refactoring, log summarization.
 - **Analytics Dashboard**: Displays 30-day usage time series, operation breakdowns, and recent operations.
-- **Browser Extension**: Manifest V3 compliant, offering local formatters and AI tools, configurable via an options page for API keys.
+- **Browser Extension**: Manifest V3 compliant, offering local formatters and AI tools, configurable via an options page for API keys (universal formatter pending deployment).
 
 **System Design Choices:**
 - **Stateless REST API v1**: Designed for browser extension and external integrations using API key authentication.
@@ -43,6 +48,7 @@ DevClip is built with a React 18, TypeScript, Vite, Tailwind CSS, and shadcn/ui 
 - **PostgreSQL (Neon)**: Database service for data persistence.
 - **Stripe**: Payment gateway for subscriptions and billing.
 - **OpenAI (via Replit AI Integrations)**: AI models (GPT-5 Nano, GPT-5 Mini, GPT-5) for AI-powered features.
+- **Prettier**: Universal code formatter for 13 programming languages (JavaScript, TypeScript/Angular, JSX, TSX, HTML, CSS, SCSS, Less, Vue, JSON, YAML, GraphQL, Markdown).
 - **`bcryptjs`**: For password hashing.
 - **`express-session` with `memorystore`**: For session management (development).
 - **`connect-pg-simple`**: For PostgreSQL-backed session store (production).

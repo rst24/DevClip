@@ -30,7 +30,7 @@ const universalFormatter = {
   id: "auto",
   label: "Smart Format",
   icon: Sparkles,
-  description: "Auto-detect & format any code (20+ languages)",
+  description: `Auto-detect & format code (13 languages supported)`,
 };
 
 export function FormattersPanel({ onSaveToHistory }: FormattersPanelProps) {
