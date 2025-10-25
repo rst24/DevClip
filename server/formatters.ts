@@ -88,8 +88,10 @@ export type SupportedLanguage =
 // Language detection patterns (matching client-side)
 const languagePatterns: Record<string, RegExp> = {
   vue: /^<template[\s>]|<script[\s>]|<style[\s>]/i,
-  // TypeScript: Check for TS-specific syntax (type annotations, generics, decorators, keywords)
-  typescript: /:\s*(?:string|number|boolean|any|void|never|unknown|object|Array|Promise|Record|Partial|Required)<|<[A-Z]\w*>|interface\s+\w+|type\s+\w+\s*=|enum\s+\w+|@Component|@NgModule|@Injectable|@Directive|@Pipe|import\s+(?:type\s+)?{|export\s+(?:type\s+|interface\s+|enum\s+)|as\s+(?:const|any)|declare\s+/,
+  // TypeScript: Very permissive regex to catch any TypeScript-specific syntax
+  // Matches: type annotations (: any-identifier), type assertions (as any-identifier),
+  // generics, keywords (interface/type/enum), decorators, TS-specific keywords
+  typescript: /:\s*(?:string|number|boolean|any|void|never|unknown|object|readonly|[A-Z][a-zA-Z0-9_]*)\b|:\s*\[|as\s+(?:string|number|boolean|any|void|never|unknown|const|[A-Z][a-zA-Z0-9_]+)\b|<[A-Z]\w*(?:<[^>]+>)?>|interface\s+\w+|type\s+\w+\s*=|enum\s+\w+|@Component|@NgModule|@Injectable|@Directive|@Pipe|import\s+(?:type\s+)?{|export\s+(?:type\s+|interface\s+|enum\s+)|declare\s+|readonly\s+|keyof\s+|infer\s+/,
   tsx: /^(import.*from|export.*|interface|type).*<[A-Z]/m,
   jsx: /<[A-Z][a-z]*[\s>]/,
   html: /^<!DOCTYPE html>|<html|<head|<body|<div|<span|<p|<a/i,
