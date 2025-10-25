@@ -1,5 +1,6 @@
 // Local text formatters - all run server-side but could be moved to client
 import * as yaml from "yaml";
+import * as prettier from "prettier";
 
 export function formatJson(text: string): string {
   try {
@@ -74,4 +75,148 @@ export function logToMarkdown(text: string): string {
   });
   
   return markdown;
+}
+
+// Universal code formatter with auto-detection
+export type SupportedLanguage = 
+  | "javascript" | "typescript" | "jsx" | "tsx"
+  | "html" | "css" | "scss" | "less"
+  | "json" | "yaml" 
+  | "markdown" | "graphql"
+  | "php" | "ruby" | "xml" | "java" | "go";
+
+// Language detection patterns
+const languagePatterns: Record<string, RegExp> = {
+  typescript: /^(import|export|interface|type|enum|namespace|as|declare)/m,
+  tsx: /^(import.*from|export.*|interface|type).*<[A-Z]/m,
+  jsx: /<[A-Z][a-z]*[\s>]/,
+  html: /^<!DOCTYPE html>|<html|<head|<body|<div|<span|<p|<a/i,
+  css: /\{[^}]*:[^}]*\}|@media|@keyframes|\.[\w-]+\s*\{/,
+  scss: /\$[\w-]+:|@mixin|@include|@extend|&:/,
+  json: /^\s*[\{\[]/,
+  yaml: /^[\w-]+:\s*[\w-]|^\s*-\s+[\w]/m,
+  markdown: /^#{1,6}\s+|^\*\*|^```|^\[.*\]\(.*\)/m,
+  graphql: /^(query|mutation|subscription|fragment|type|interface|enum|input|schema)/m,
+  php: /^<\?php|namespace|use|class|function|public|private|protected/m,
+  ruby: /^(def|class|module|require|include|end|do|if|unless)\s+/m,
+  xml: /^<\?xml|<[\w-]+.*>/,
+  java: /^(public|private|protected|class|interface|import|package)\s+/m,
+  go: /^(package|import|func|type|var|const)\s+/m,
+  javascript: /^(import|export|const|let|var|function|class|=>|\{|\[)/m,
+};
+
+function detectLanguage(code: string): SupportedLanguage {
+  const trimmed = code.trim();
+  
+  // Check patterns in order of specificity
+  if (languagePatterns.typescript.test(trimmed) && !trimmed.includes('<')) {
+    return "typescript";
+  }
+  if (languagePatterns.tsx.test(trimmed)) {
+    return "tsx";
+  }
+  if (languagePatterns.jsx.test(trimmed)) {
+    return "jsx";
+  }
+  if (languagePatterns.html.test(trimmed)) {
+    return "html";
+  }
+  if (languagePatterns.scss.test(trimmed)) {
+    return "scss";
+  }
+  if (languagePatterns.css.test(trimmed)) {
+    return "css";
+  }
+  if (languagePatterns.json.test(trimmed)) {
+    try {
+      JSON.parse(trimmed);
+      return "json";
+    } catch {
+      // Not valid JSON
+    }
+  }
+  if (languagePatterns.yaml.test(trimmed)) {
+    return "yaml";
+  }
+  if (languagePatterns.markdown.test(trimmed)) {
+    return "markdown";
+  }
+  if (languagePatterns.graphql.test(trimmed)) {
+    return "graphql";
+  }
+  if (languagePatterns.php.test(trimmed)) {
+    return "php";
+  }
+  if (languagePatterns.ruby.test(trimmed)) {
+    return "ruby";
+  }
+  if (languagePatterns.xml.test(trimmed)) {
+    return "xml";
+  }
+  if (languagePatterns.java.test(trimmed)) {
+    return "java";
+  }
+  if (languagePatterns.go.test(trimmed)) {
+    return "go";
+  }
+  if (languagePatterns.javascript.test(trimmed)) {
+    return "javascript";
+  }
+  
+  return "javascript";
+}
+
+export async function formatCode(code: string, language?: SupportedLanguage): Promise<{ formatted: string; detectedLanguage: string }> {
+  try {
+    const detectedLanguage = language || detectLanguage(code);
+    
+    // Map language to Prettier parser
+    const parserMap: Record<SupportedLanguage, string> = {
+      javascript: "babel",
+      typescript: "typescript",
+      jsx: "babel",
+      tsx: "typescript",
+      html: "html",
+      css: "css",
+      scss: "scss",
+      less: "less",
+      json: "json",
+      yaml: "yaml",
+      markdown: "markdown",
+      graphql: "graphql",
+      php: "php",
+      ruby: "ruby",
+      xml: "xml",
+      java: "java",
+      go: "go-template",
+    };
+    
+    const parser = parserMap[detectedLanguage];
+    
+    const formatted = await prettier.format(code, {
+      parser,
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      semi: true,
+      singleQuote: false,
+      trailingComma: "es5",
+      bracketSpacing: true,
+      arrowParens: "always",
+      plugins: [
+        "@prettier/plugin-php",
+        "@prettier/plugin-ruby",
+        "@prettier/plugin-xml",
+        "prettier-plugin-java",
+        "prettier-plugin-go-template",
+      ],
+    });
+    
+    return {
+      formatted: formatted.trim(),
+      detectedLanguage,
+    };
+  } catch (error) {
+    throw new Error(`Failed to format ${language || 'code'}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
