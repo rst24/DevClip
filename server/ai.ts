@@ -1,4 +1,4 @@
-import { openai, MAX_TOKENS } from "./openai";
+import { openai, MAX_COMPLETION_TOKENS } from "./openai";
 
 const systemPrompts: Record<string, string> = {
   explain: "You are a helpful code assistant. Explain the following code or text clearly and concisely.",
@@ -15,7 +15,7 @@ export async function processAiRequest(
   
   const completion = await openai.chat.completions.create({
     model,
-    max_tokens: MAX_TOKENS,
+    max_completion_tokens: MAX_COMPLETION_TOKENS,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: text }
@@ -35,7 +35,7 @@ export async function processAiRequestWithMetadata(
   
   const completion = await openai.chat.completions.create({
     model,
-    max_tokens: MAX_TOKENS,
+    max_completion_tokens: MAX_COMPLETION_TOKENS,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: text }

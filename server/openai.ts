@@ -14,7 +14,7 @@ export const AI_MODELS = {
   team: "gpt-5",         // Premium, best quality - for 25K credits/month
 } as const;
 
-export const MAX_TOKENS = 2048; // Strict token cap for cost control
+export const MAX_COMPLETION_TOKENS = 2048; // Strict token cap for cost control (using max_completion_tokens for GPT-5 models)
 
 /**
  * Get the appropriate AI model based on user's subscription plan

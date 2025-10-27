@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import archiver from "archiver";
 import path from "path";
 import { storage } from "./storage";
-import { openai, getModelForPlan, MAX_TOKENS } from "./openai";
+import { openai, getModelForPlan, MAX_COMPLETION_TOKENS } from "./openai";
 import { 
   formatJson, 
   formatYaml, 
@@ -226,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const completion = await openai.chat.completions.create({
         model,
-        max_tokens: MAX_TOKENS,
+        max_completion_tokens: MAX_COMPLETION_TOKENS,
         messages: [
           { role: "system", content: systemPrompts[data.operation] },
           { role: "user", content: data.text }
