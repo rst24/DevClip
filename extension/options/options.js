@@ -18,12 +18,21 @@ async function loadSettings() {
   updateDashboardLinks();
 }
 
-// Update dashboard links
+// Update dashboard links with auto-login
 function updateDashboardLinks() {
   const baseUrl = document.getElementById('apiBaseUrl').value.replace('/api/v1', '');
-  document.getElementById('dashboardLink').href = baseUrl;
-  document.getElementById('dashboardLinkFooter').href = baseUrl;
-  document.getElementById('subscriptionLink').href = `${baseUrl}/?tab=settings`;
+  const apiKey = document.getElementById('apiKey').value.trim();
+  
+  // If API key exists, use auto-login URL, otherwise direct link
+  if (apiKey) {
+    document.getElementById('dashboardLink').href = `${baseUrl}/api/auth/api-login?key=${encodeURIComponent(apiKey)}`;
+    document.getElementById('dashboardLinkFooter').href = `${baseUrl}/api/auth/api-login?key=${encodeURIComponent(apiKey)}`;
+    document.getElementById('subscriptionLink').href = `${baseUrl}/api/auth/api-login?key=${encodeURIComponent(apiKey)}`;
+  } else {
+    document.getElementById('dashboardLink').href = baseUrl;
+    document.getElementById('dashboardLinkFooter').href = baseUrl;
+    document.getElementById('subscriptionLink').href = `${baseUrl}/?tab=settings`;
+  }
 }
 
 // Listen for URL changes
@@ -47,6 +56,7 @@ async function saveSettings() {
     
     showAlert('Settings saved successfully!', 'success');
     updateApiKeyStatus(true);
+    updateDashboardLinks(); // Update links with API key for auto-login
   } catch (error) {
     showAlert(`Error saving settings: ${error.message}`, 'error');
   }

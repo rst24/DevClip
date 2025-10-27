@@ -115,6 +115,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth routes are handled by replitAuth.ts
   // /api/login, /api/callback, /api/logout
   
+  // API Key to Session Login - for browser extension auto-login
+  app.get("/api/auth/api-login", async (req: any, res) => {
+    try {
+      const apiKey = req.query.key as string;
+      
+      if (!apiKey || !apiKey.startsWith("devclip_")) {
+        return res.status(400).send("Invalid or missing API key");
+      }
+      
+      // Validate API key
+      const keyRecord = await storage.getApiKeyByKey(apiKey);
+      if (!keyRecord || keyRecord.revokedAt) {
+        return res.status(401).send("Invalid or revoked API key");
+      }
+      
+      // Get user
+      const user = await storage.getUser(keyRecord.userId);
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      
+      // Create session manually (simulate OAuth login)
+      req.login({
+        claims: {
+          sub: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          profile_image_url: user.profileImageUrl,
+          exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 1 week
+        },
+        access_token: "api-key-session", // Placeholder
+        refresh_token: null,
+        expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
+      }, (err: any) => {
+        if (err) {
+          console.error("Session creation error:", err);
+          return res.status(500).send("Failed to create session");
+        }
+        
+        // Update API key last used
+        storage.updateApiKeyLastUsed(keyRecord.id);
+        
+        // Redirect to dashboard
+        res.redirect("/?tab=settings");
+      });
+    } catch (error: any) {
+      console.error("API login error:", error);
+      res.status(500).send("Auto-login failed");
+    }
+  });
+  
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
