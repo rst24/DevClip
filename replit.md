@@ -32,6 +32,11 @@ DevClip is built with a React 18, TypeScript, Vite, Tailwind CSS, and shadcn/ui 
   - **Data Formats**: JSON, YAML, GraphQL
   - **Documents**: Markdown
   - Features: Auto-detection of language from code patterns, client-side formatting (web app), server-side API support, language badge display
+  - **Detection Logic** (October 27, 2025): Critical ordering fixes applied to prevent misclassification:
+    1. Check frameworks first (Vue, TSX, JSX)
+    2. Check JSON before JavaScript (both start with `{`)
+    3. Check JavaScript before CSS (CSS pattern matches JS object literals like `{a:1}`)
+    4. Final order: Vue → TSX → JSX → JSON → TypeScript → JavaScript → HTML → GraphQL → SCSS → Less → CSS → YAML → Markdown
 - **Legacy Formatters**: JSON, YAML, SQL prettify, ANSI strip, log-to-markdown (maintained for backward compatibility).
 - **AI Operations**: Code explanation, refactoring, log summarization.
 - **Analytics Dashboard**: Displays 30-day usage time series, operation breakdowns, and recent operations.

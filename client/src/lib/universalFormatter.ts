@@ -41,7 +41,10 @@ export function detectLanguage(code: string): SupportedLanguage {
   const trimmed = code.trim();
   
   // Check for specific patterns in order of specificity
-  // Note: Order matters - more specific patterns first
+  // IMPORTANT: Order matters! Check:
+  // 1. Frameworks/templates first (Vue, TSX, JSX)
+  // 2. JSON before JavaScript (both start with {)
+  // 3. Programming languages before CSS (CSS pattern matches {a:1})
   if (languagePatterns.vue.test(trimmed)) {
     return "vue";
   }
@@ -51,11 +54,26 @@ export function detectLanguage(code: string): SupportedLanguage {
   if (languagePatterns.jsx.test(trimmed)) {
     return "jsx";
   }
+  // Check JSON before TypeScript/JavaScript (they can all start with {)
+  if (languagePatterns.json.test(trimmed)) {
+    try {
+      JSON.parse(trimmed);
+      return "json";
+    } catch {
+      // Not valid JSON, continue to check TypeScript/JavaScript
+    }
+  }
   if (languagePatterns.typescript.test(trimmed)) {
     return "typescript";
   }
+  if (languagePatterns.javascript.test(trimmed)) {
+    return "javascript";
+  }
   if (languagePatterns.html.test(trimmed)) {
     return "html";
+  }
+  if (languagePatterns.graphql.test(trimmed)) {
+    return "graphql";
   }
   if (languagePatterns.scss.test(trimmed)) {
     return "scss";
@@ -66,25 +84,11 @@ export function detectLanguage(code: string): SupportedLanguage {
   if (languagePatterns.css.test(trimmed)) {
     return "css";
   }
-  if (languagePatterns.json.test(trimmed)) {
-    try {
-      JSON.parse(trimmed);
-      return "json";
-    } catch {
-      // Not valid JSON, continue detection
-    }
-  }
   if (languagePatterns.yaml.test(trimmed)) {
     return "yaml";
   }
   if (languagePatterns.markdown.test(trimmed)) {
     return "markdown";
-  }
-  if (languagePatterns.graphql.test(trimmed)) {
-    return "graphql";
-  }
-  if (languagePatterns.javascript.test(trimmed)) {
-    return "javascript";
   }
   
   // Default to JavaScript if no pattern matches
