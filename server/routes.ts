@@ -556,19 +556,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || !user.stripeCustomerId) {
-        return res.status(400).json({ message: "No billing information found" });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
       
+      let customerId = user.stripeCustomerId;
+      
+      // Create Stripe customer on-the-fly if missing
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await storage.updateUserPlan(userId, user.plan, customerId);
+      }
+      
+      // Create billing portal session
       const session = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
+        customer: customerId,
         return_url: req.headers.origin || 'http://localhost:5000',
       });
       
       res.json({ url: session.url });
     } catch (error: any) {
       console.error("Billing portal error:", error);
-      res.status(500).json({ message: "Failed to create portal session" });
+      
+      // Handle specific Stripe errors
+      if (error.type === 'StripeInvalidRequestError') {
+        if (error.code === 'resource_missing') {
+          return res.status(404).json({ 
+            message: "Billing account not found. Please contact support." 
+          });
+        }
+        return res.status(400).json({ 
+          message: error.message || "Invalid billing request" 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to open billing portal" });
     }
   });
 
