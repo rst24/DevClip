@@ -478,7 +478,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-5' : 'grid-cols-1'} max-w-4xl mx-auto`}>
+          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-6' : 'grid-cols-1'} max-w-5xl mx-auto`}>
             {isAuthenticated && (
               <TabsTrigger value="dashboard" data-testid="tab-dashboard">
                 <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -491,6 +491,10 @@ export default function Dashboard() {
             </TabsTrigger>
             {isAuthenticated && (
               <>
+                <TabsTrigger value="memory" data-testid="tab-memory">
+                  <HardDrive className="h-4 w-4 mr-2" />
+                  Memory
+                </TabsTrigger>
                 <TabsTrigger value="ai-tools" data-testid="tab-ai-tools">
                   <Sparkles className="h-4 w-4 mr-2" />
                   AI Tools
@@ -551,6 +555,62 @@ export default function Dashboard() {
               <FormattersPanel onSaveToHistory={handleSaveFormattedToHistory} />
             </Suspense>
           </TabsContent>
+
+          {/* Code Memory - Authenticated only */}
+          {isAuthenticated && user && (
+            <TabsContent value="memory">
+              <div className="max-w-4xl mx-auto space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold" data-testid="heading-memory">Code Memory</h2>
+                    <p className="text-sm text-muted-foreground">Your saved code snippets with AI-powered tagging</p>
+                  </div>
+                  <Badge variant="secondary" data-testid="badge-memory-count">
+                    {clipboardItems.length} snippets
+                  </Badge>
+                </div>
+
+                {historyLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-muted rounded w-1/4" />
+                            <div className="h-3 bg-muted rounded w-1/2" />
+                          </div>
+                        </div>
+                        <div className="h-20 bg-muted rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : clipboardItems.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                    <HardDrive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No snippets saved yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Format code or use AI tools to automatically save snippets to your memory
+                    </p>
+                    <Button onClick={() => setActiveTab('formatters')} data-testid="button-start-formatting">
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Start Formatting
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {clipboardItems.map((item) => (
+                      <ClipboardCard
+                        key={item.id}
+                        item={item}
+                        onCopy={handleCopyToClipboard}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
 
           {/* AI Tools - Authenticated only */}
           {isAuthenticated && user && (

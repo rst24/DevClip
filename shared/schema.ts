@@ -1,7 +1,20 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, index, jsonb, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Custom pgvector type for embeddings
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(1536)';
+  },
+  toDriver(value: number[]): string {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value);
+  },
+});
 
 // Session storage table - required for Replit Auth
 export const sessions = pgTable(
@@ -60,7 +73,7 @@ export const clipboardItems = pgTable(
     // AI Code Memory features
     language: text("language"), // Auto-detected programming language (javascript, python, etc.)
     tags: text("tags").array().default(sql`ARRAY[]::text[]`), // AI-generated and manual tags
-    embedding: jsonb("embedding"), // OpenAI embedding vector for semantic search (1536 dimensions)
+    embedding: vector("embedding"), // OpenAI embedding vector for semantic search using pgvector
     
     // Team collaboration features
     isShared: boolean("is_shared").notNull().default(false), // Shared with team

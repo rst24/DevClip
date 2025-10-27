@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authenticateApiKey, type ApiKeyRequest } from "../middleware/authenticateApiKey";
 import { storage } from "../storage";
 import { formatJson, formatYaml, formatSql, stripAnsi, logToMarkdown } from "../formatters";
+import { generateEmbedding, extractTags, cosineSimilarity } from "../openai";
 
 const router = Router();
 
@@ -35,14 +36,14 @@ router.post("/format", authenticateApiKey, async (req: ApiKeyRequest, res: Respo
     const { text, operation } = validation.data;
     const user = req.apiUser!;
 
-    // Check if user has sufficient credits (0.1 credits for formatters)
-    const creditCost = 0.1;
-    if (user.aiCreditsBalance < creditCost) {
+    // Check if user has sufficient tokens (1 token for formatters)
+    const tokenCost = 1;
+    if (user.tokenBalance < tokenCost) {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
-        creditsRequired: creditCost,
-        creditsAvailable: user.aiCreditsBalance,
+        message: "Insufficient tokens",
+        tokensRequired: tokenCost,
+        tokensAvailable: user.tokenBalance,
       });
     }
 
@@ -78,24 +79,24 @@ router.post("/format", authenticateApiKey, async (req: ApiKeyRequest, res: Respo
       });
     }
 
-    // Deduct credits and update cached user
-    const updatedUser = await storage.deductCredits(user.id, creditCost);
+    // Deduct tokens and update cached user
+    const updatedUser = await storage.deductTokens(user.id, tokenCost);
     req.apiUser = updatedUser;
 
     return res.status(200).json({
       success: true,
       operation,
       result,
-      creditsUsed: creditCost,
-      creditsRemaining: updatedUser.aiCreditsBalance,
+      tokensUsed: tokenCost,
+      tokensRemaining: updatedUser.tokenBalance,
     });
   } catch (error) {
     console.error("[API v1 /format error]", error);
     
-    if (error instanceof Error && error.message === "Insufficient credits") {
+    if (error instanceof Error && error.message === "Insufficient tokens") {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
+        message: "Insufficient tokens",
       });
     }
     
@@ -122,14 +123,14 @@ router.post("/ai/explain", authenticateApiKey, async (req: ApiKeyRequest, res: R
     const { text } = validation.data;
     const user = req.apiUser!;
 
-    // Check if user has sufficient credits (1 credit for explain)
-    const creditCost = 1;
-    if (user.aiCreditsBalance < creditCost) {
+    // Check if user has sufficient tokens (3 tokens for explain)
+    const tokenCost = 3;
+    if (user.tokenBalance < tokenCost) {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
-        creditsRequired: creditCost,
-        creditsAvailable: user.aiCreditsBalance,
+        message: "Insufficient tokens",
+        tokensRequired: tokenCost,
+        tokensAvailable: user.tokenBalance,
       });
     }
 
@@ -139,8 +140,8 @@ router.post("/ai/explain", authenticateApiKey, async (req: ApiKeyRequest, res: R
     const model = getModelForPlan(user.plan as "free" | "pro" | "team");
     const result = await processAiRequest(text, "explain", model);
 
-    // Deduct credits and update cached user
-    const updatedUser = await storage.deductCredits(user.id, creditCost);
+    // Deduct tokens and update cached user
+    const updatedUser = await storage.deductTokens(user.id, tokenCost);
     req.apiUser = updatedUser;
     
     await storage.createAiOperation({
@@ -148,24 +149,24 @@ router.post("/ai/explain", authenticateApiKey, async (req: ApiKeyRequest, res: R
       operationType: "explain",
       inputText: text.substring(0, 1000), // Store truncated version
       outputText: result.substring(0, 1000),
-      tokensUsed: 0, // Would be populated from OpenAI response
-      creditsUsed: creditCost,
+      apiTokensUsed: 0, // Would be populated from OpenAI response
+      tokensCharged: tokenCost,
     });
 
     return res.status(200).json({
       success: true,
       operation: "explain",
       result,
-      creditsUsed: creditCost,
-      creditsRemaining: updatedUser.aiCreditsBalance,
+      tokensUsed: tokenCost,
+      tokensRemaining: updatedUser.tokenBalance,
     });
   } catch (error) {
     console.error("[API v1 /ai/explain error]", error);
     
-    if (error instanceof Error && error.message === "Insufficient credits") {
+    if (error instanceof Error && error.message === "Insufficient tokens") {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
+        message: "Insufficient tokens",
       });
     }
     
@@ -192,13 +193,13 @@ router.post("/ai/refactor", authenticateApiKey, async (req: ApiKeyRequest, res: 
     const { text } = validation.data;
     const user = req.apiUser!;
 
-    const creditCost = 2; // Refactoring costs 2 credits
-    if (user.aiCreditsBalance < creditCost) {
+    const tokenCost = 1; // Refactoring costs 1 token
+    if (user.tokenBalance < tokenCost) {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
-        creditsRequired: creditCost,
-        creditsAvailable: user.aiCreditsBalance,
+        message: "Insufficient tokens",
+        tokensRequired: tokenCost,
+        tokensAvailable: user.tokenBalance,
       });
     }
 
@@ -208,8 +209,8 @@ router.post("/ai/refactor", authenticateApiKey, async (req: ApiKeyRequest, res: 
     const model = getModelForPlan(user.plan as "free" | "pro" | "team");
     const result = await processAiRequest(text, "refactor", model);
 
-    // Deduct credits and update cached user
-    const updatedUser = await storage.deductCredits(user.id, creditCost);
+    // Deduct tokens and update cached user
+    const updatedUser = await storage.deductTokens(user.id, tokenCost);
     req.apiUser = updatedUser;
     
     await storage.createAiOperation({
@@ -217,24 +218,24 @@ router.post("/ai/refactor", authenticateApiKey, async (req: ApiKeyRequest, res: 
       operationType: "refactor",
       inputText: text.substring(0, 1000),
       outputText: result.substring(0, 1000),
-      tokensUsed: 0,
-      creditsUsed: creditCost,
+      apiTokensUsed: 0,
+      tokensCharged: tokenCost,
     });
 
     return res.status(200).json({
       success: true,
       operation: "refactor",
       result,
-      creditsUsed: creditCost,
-      creditsRemaining: updatedUser.aiCreditsBalance,
+      tokensUsed: tokenCost,
+      tokensRemaining: updatedUser.tokenBalance,
     });
   } catch (error) {
     console.error("[API v1 /ai/refactor error]", error);
     
-    if (error instanceof Error && error.message === "Insufficient credits") {
+    if (error instanceof Error && error.message === "Insufficient tokens") {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
+        message: "Insufficient tokens",
       });
     }
     
@@ -261,13 +262,13 @@ router.post("/ai/summarize", authenticateApiKey, async (req: ApiKeyRequest, res:
     const { text } = validation.data;
     const user = req.apiUser!;
 
-    const creditCost = 1; // Summarization costs 1 credit
-    if (user.aiCreditsBalance < creditCost) {
+    const tokenCost = 2; // Summarization costs 2 tokens
+    if (user.tokenBalance < tokenCost) {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
-        creditsRequired: creditCost,
-        creditsAvailable: user.aiCreditsBalance,
+        message: "Insufficient tokens",
+        tokensRequired: tokenCost,
+        tokensAvailable: user.tokenBalance,
       });
     }
 
@@ -277,8 +278,8 @@ router.post("/ai/summarize", authenticateApiKey, async (req: ApiKeyRequest, res:
     const model = getModelForPlan(user.plan as "free" | "pro" | "team");
     const result = await processAiRequest(text, "summarize", model);
 
-    // Deduct credits and update cached user
-    const updatedUser = await storage.deductCredits(user.id, creditCost);
+    // Deduct tokens and update cached user
+    const updatedUser = await storage.deductTokens(user.id, tokenCost);
     req.apiUser = updatedUser;
     
     await storage.createAiOperation({
@@ -286,30 +287,195 @@ router.post("/ai/summarize", authenticateApiKey, async (req: ApiKeyRequest, res:
       operationType: "summarize",
       inputText: text.substring(0, 1000),
       outputText: result.substring(0, 1000),
-      tokensUsed: 0,
-      creditsUsed: creditCost,
+      apiTokensUsed: 0,
+      tokensCharged: tokenCost,
     });
 
     return res.status(200).json({
       success: true,
       operation: "summarize",
       result,
-      creditsUsed: creditCost,
-      creditsRemaining: updatedUser.aiCreditsBalance,
+      tokensUsed: tokenCost,
+      tokensRemaining: updatedUser.tokenBalance,
     });
   } catch (error) {
     console.error("[API v1 /ai/summarize error]", error);
     
-    if (error instanceof Error && error.message === "Insufficient credits") {
+    if (error instanceof Error && error.message === "Insufficient tokens") {
       return res.status(402).json({
         error: "Payment Required",
-        message: "Insufficient credits",
+        message: "Insufficient tokens",
       });
     }
     
     return res.status(500).json({
       error: "Internal Server Error",
       message: "Failed to process AI request",
+    });
+  }
+});
+
+// Memory endpoint schemas
+const memorySaveSchema = z.object({
+  content: z.string().min(1).max(100000), // Max 100KB of code
+  language: z.string().optional(), // Programming language (auto-detected if not provided)
+  tags: z.array(z.string()).optional(), // Manual tags (AI will add more)
+  isShared: z.boolean().optional(), // Share with team
+});
+
+const memorySearchSchema = z.object({
+  query: z.string().min(1).max(500), // Natural language search query
+  limit: z.number().min(1).max(50).optional().default(10), // Result limit
+});
+
+// POST /api/v1/memory/save - Save code snippet with AI tagging and embeddings
+router.post("/memory/save", authenticateApiKey, async (req: ApiKeyRequest, res: Response) => {
+  try {
+    const validation = memorySaveSchema.safeParse(req.body);
+    
+    if (!validation.success) {
+      return res.status(400).json({
+        error: "Validation Error",
+        message: "Invalid request body",
+        details: validation.error.errors,
+      });
+    }
+
+    const { content, language, tags: manualTags, isShared } = validation.data;
+    const user = req.apiUser!;
+
+    // Generate embedding for semantic search (Pro/Team only)
+    let embedding: number[] | null = null;
+    if (user.plan !== "free") {
+      try {
+        embedding = await generateEmbedding(content);
+      } catch (error) {
+        console.error("Embedding generation failed:", error);
+        // Continue without embedding - it's optional
+      }
+    }
+
+    // Extract AI-generated tags (Pro/Team only)
+    let aiTags: string[] = [];
+    if (user.plan !== "free") {
+      try {
+        aiTags = await extractTags(content, language);
+      } catch (error) {
+        console.error("Tag extraction failed:", error);
+        // Continue without AI tags
+      }
+    }
+
+    // Combine manual and AI tags, remove duplicates
+    const allTags = Array.from(new Set([...(manualTags || []), ...aiTags]));
+
+    // Save to memory
+    const clipboardItem = await storage.createClipboardItem({
+      userId: user.id,
+      content,
+      contentType: "code",
+      formatted: false,
+      favorite: false,
+      language: language || null,
+      tags: allTags,
+      embedding: embedding, // Store as number[] directly for pgvector
+      isShared: isShared || false,
+      teamId: isShared && user.plan === "team" ? user.id : null, // Simple team ID for now
+    });
+
+    return res.status(200).json({
+      success: true,
+      memory: {
+        id: clipboardItem.id,
+        tags: allTags,
+        aiTagsCount: aiTags.length,
+        hasEmbedding: !!embedding,
+      },
+      message: "Code snippet saved to memory",
+    });
+  } catch (error) {
+    console.error("[API v1 /memory/save error]", error);
+    
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to save to memory",
+    });
+  }
+});
+
+// POST /api/v1/memory/search - Semantic search across saved snippets
+router.post("/memory/search", authenticateApiKey, async (req: ApiKeyRequest, res: Response) => {
+  try {
+    const validation = memorySearchSchema.safeParse(req.body);
+    
+    if (!validation.success) {
+      return res.status(400).json({
+        error: "Validation Error",
+        message: "Invalid request body",
+        details: validation.error.errors,
+      });
+    }
+
+    const { query, limit } = validation.data;
+    const user = req.apiUser!;
+
+    // Semantic search only for Pro/Team users
+    if (user.plan === "free") {
+      return res.status(403).json({
+        error: "Feature Not Available",
+        message: "Semantic search is available on Pro ($9.99/mo) and Team ($29.99/mo) plans",
+        upgrade: "https://devclip.app/pricing",
+      });
+    }
+
+    // Generate embedding for the search query
+    let queryEmbedding: number[];
+    try {
+      queryEmbedding = await generateEmbedding(query);
+    } catch (error) {
+      console.error("Query embedding generation failed:", error);
+      return res.status(500).json({
+        error: "Search Error",
+        message: "Failed to process search query",
+      });
+    }
+
+    // TODO: Replace with SQL pgvector query for better performance
+    // For now, using in-memory similarity (will upgrade to SQL in next iteration)
+    const allSnippets = await storage.getClipboardItems(user.id);
+    const snippetsWithEmbeddings = allSnippets.filter(s => s.embedding);
+
+    // Calculate similarity scores and rank results
+    const rankedResults = snippetsWithEmbeddings
+      .map(snippet => {
+        const snippetEmbedding = snippet.embedding as number[]; // Already parsed by custom type converter
+        const similarity = cosineSimilarity(queryEmbedding, snippetEmbedding);
+        
+        return {
+          id: snippet.id,
+          content: snippet.content,
+          language: snippet.language,
+          tags: snippet.tags,
+          createdAt: snippet.createdAt,
+          similarity,
+        };
+      })
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
+
+    return res.status(200).json({
+      success: true,
+      query,
+      results: rankedResults,
+      totalResults: rankedResults.length,
+      searchedSnippets: snippetsWithEmbeddings.length,
+    });
+  } catch (error) {
+    console.error("[API v1 /memory/search error]", error);
+    
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to search memory",
     });
   }
 });

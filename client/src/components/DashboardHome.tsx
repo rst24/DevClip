@@ -20,7 +20,7 @@ import {
   Clock,
   Wand2,
   Sparkles,
-  History,
+  Database,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -173,18 +173,18 @@ export function DashboardHome({
           </Card>
         )}
 
-        {/* Clipboard Items */}
-        <Card data-testid="card-clipboard-count">
+        {/* Code Memory */}
+        <Card data-testid="card-memory-count">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clipboard Items</CardTitle>
-            <History className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Code Memory</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-clipboard-count">
+            <div className="text-2xl font-bold" data-testid="text-memory-count">
               {clipboardItems.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Saved in history
+              Saved snippets
             </p>
           </CardContent>
         </Card>
@@ -283,13 +283,13 @@ export function DashboardHome({
           <Button
             variant="outline"
             className="justify-start h-auto py-3"
-            onClick={() => onNavigateToTab('history')}
-            data-testid="button-quick-history"
+            onClick={() => onNavigateToTab('memory')}
+            data-testid="button-quick-memory"
           >
-            <History className="h-4 w-4 mr-2" />
+            <Database className="h-4 w-4 mr-2" />
             <div className="text-left flex-1">
-              <div className="font-medium">View History</div>
-              <div className="text-xs text-muted-foreground">{clipboardItems.length} items saved</div>
+              <div className="font-medium">Code Memory</div>
+              <div className="text-xs text-muted-foreground">{clipboardItems.length} snippets saved</div>
             </div>
           </Button>
 
@@ -320,8 +320,8 @@ export function DashboardHome({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onNavigateToTab('history')}
-                data-testid="button-view-all-history"
+                onClick={() => onNavigateToTab('memory')}
+                data-testid="button-view-all-memory"
               >
                 View All
               </Button>
