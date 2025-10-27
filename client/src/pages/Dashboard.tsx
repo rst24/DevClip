@@ -11,6 +11,8 @@ import { ClipboardCard } from "@/components/ClipboardCard";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { CreditWarningBanner } from "@/components/CreditWarningBanner";
+import { UserProfileDropdown } from "@/components/UserProfileDropdown";
+import { CreditBalanceWidget } from "@/components/CreditBalanceWidget";
 
 // Lazy load heavy components for code splitting
 const FormattersPanel = lazy(() => import("@/components/FormattersPanel").then(m => ({ default: m.FormattersPanel })));
@@ -45,6 +47,7 @@ export default function Dashboard() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [localItems, setLocalItems] = useState<LocalClipboardItem[]>([]);
+  const [activeTab, setActiveTab] = useState("history");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -380,7 +383,13 @@ export default function Dashboard() {
               <h1 className="text-xl font-bold" data-testid="text-app-title">DevClip</h1>
             </div>
             {isAuthenticated && user && (
-              <PlanBadge plan={(user as any).plan as "free" | "pro" | "team"} />
+              <>
+                <PlanBadge plan={(user as any).plan as "free" | "pro" | "team"} />
+                <CreditBalanceWidget
+                  balance={(user as any).aiCreditsBalance || 0}
+                  plan={(user as any).plan as "free" | "pro" | "team"}
+                />
+              </>
             )}
             {/* Mode indicator */}
             <Badge 
@@ -423,15 +432,36 @@ export default function Dashboard() {
               <Download className="h-4 w-4 mr-2" />
               Extension
             </Button>
-            {isAuthenticated ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+            {isAuthenticated && user ? (
+              <UserProfileDropdown
+                user={{
+                  email: user.email,
+                  firstName: (user as any).firstName,
+                  lastName: (user as any).lastName,
+                  profileImageUrl: (user as any).profileImageUrl,
+                  plan: (user as any).plan as "free" | "pro" | "team",
+                  aiCreditsBalance: (user as any).aiCreditsBalance,
+                }}
+                onNavigate={(tab) => {
+                  setActiveTab(tab);
+                }}
+                onLogout={handleLogout}
+                onManageBilling={async () => {
+                  try {
+                    const res = await apiRequest("/api/billing/portal", "POST", {});
+                    const data = await res.json();
+                    if (data.url) {
+                      window.open(data.url, '_blank');
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to open billing portal",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              />
             ) : (
               <Button
                 variant="ghost"
@@ -450,7 +480,7 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="history" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-6' : 'grid-cols-2'} max-w-4xl mx-auto`}>
             <TabsTrigger value="history" data-testid="tab-history">
               <History className="h-4 w-4 mr-2" />

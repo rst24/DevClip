@@ -171,6 +171,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      
+      // Prevent caching of user data to ensure subscription updates are reflected immediately
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(user);
     } catch (error: any) {
       console.error("Error fetching user:", error);
