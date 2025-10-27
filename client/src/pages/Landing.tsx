@@ -324,16 +324,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Pricing Preview */}
+      {/* Pricing Comparison */}
       <section className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <div className="space-y-4">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
             <h2 className="text-3xl md:text-4xl font-bold">Simple, Transparent Pricing</h2>
             <p className="text-lg text-muted-foreground">
               Start free, upgrade when you need AI power and API access
             </p>
           </div>
 
+          {/* Pricing Cards */}
           <div className="grid md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
@@ -344,15 +345,38 @@ export default function Landing() {
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm">✓ Local formatting</p>
-                <p className="text-sm">✓ 50 AI credits/month</p>
-                <p className="text-sm">✓ Browser extension</p>
-                <p className="text-sm text-muted-foreground">✗ No API keys</p>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">50 AI credits/month</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">13-language code formatter</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Browser extension access</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Cloud sync & history</p>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="text-sm">✗</span>
+                  <p className="text-sm">No API key access</p>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="text-sm">✗</span>
+                  <p className="text-sm">No credit carryover</p>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-primary">
+            <Card className="border-primary shadow-lg relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+              </div>
               <CardHeader>
                 <CardTitle>Pro</CardTitle>
                 <CardDescription>For power users</CardDescription>
@@ -361,28 +385,224 @@ export default function Landing() {
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm">✓ Everything in Free</p>
-                <p className="text-sm">✓ 5,000 AI credits</p>
-                <p className="text-sm">✓ 3 API keys</p>
-                <p className="text-sm">✓ Credit carryover</p>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm"><strong>5,000 AI credits/month</strong></p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Everything in Free</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Up to 3 API keys</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Credit carryover (max 10,000)</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Priority support</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Advanced analytics</p>
+                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <CardTitle>Team</CardTitle>
-                <CardDescription>For teams</CardDescription>
+                <CardDescription>For organizations</CardDescription>
                 <div className="mt-4">
                   <span className="text-3xl font-bold">$39.99</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm">✓ Everything in Pro</p>
-                <p className="text-sm">✓ 25,000 shared credits</p>
-                <p className="text-sm">✓ Unlimited API keys</p>
-                <p className="text-sm">✓ Team features</p>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm"><strong>25,000 shared credits/month</strong></p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Everything in Pro</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Unlimited API keys</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Team management dashboard</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Dedicated support</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">✓</span>
+                  <p className="text-sm">Usage analytics & reporting</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detailed Comparison Table */}
+          <Card className="mt-12">
+            <CardHeader>
+              <CardTitle>Feature Comparison</CardTitle>
+              <CardDescription>See what's included in each plan</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-semibold">Feature</th>
+                    <th className="text-center py-3 px-4 font-semibold">Free</th>
+                    <th className="text-center py-3 px-4 font-semibold">Pro</th>
+                    <th className="text-center py-3 px-4 font-semibold">Team</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Monthly AI Credits</td>
+                    <td className="text-center py-3 px-4">50</td>
+                    <td className="text-center py-3 px-4">5,000</td>
+                    <td className="text-center py-3 px-4">25,000</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Code Formatter (13 languages)</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">AI Code Explanation</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">AI Refactoring</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Cloud Sync & History</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                    <td className="text-center py-3 px-4">✓</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">API Keys</td>
+                    <td className="text-center py-3 px-4 text-muted-foreground">—</td>
+                    <td className="text-center py-3 px-4">Up to 3</td>
+                    <td className="text-center py-3 px-4">Unlimited</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Credit Carryover</td>
+                    <td className="text-center py-3 px-4 text-muted-foreground">—</td>
+                    <td className="text-center py-3 px-4">Max 10,000</td>
+                    <td className="text-center py-3 px-4">Max 50,000</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Analytics Dashboard</td>
+                    <td className="text-center py-3 px-4">Basic</td>
+                    <td className="text-center py-3 px-4">Advanced</td>
+                    <td className="text-center py-3 px-4">Advanced</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Support</td>
+                    <td className="text-center py-3 px-4">Community</td>
+                    <td className="text-center py-3 px-4">Priority</td>
+                    <td className="text-center py-3 px-4">Dedicated</td>
+                  </tr>
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="container mx-auto px-4 py-16 bg-muted/30">
+        <div className="max-w-3xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold">Frequently Asked Questions</h2>
+            <p className="text-lg text-muted-foreground">
+              Everything you need to know about DevClip
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">What are AI credits?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                AI credits are used for AI-powered features like code explanation, refactoring, and log summarization. 
+                Simple operations cost 1-2 credits, complex ones cost 3-5 credits. Free users get 50 credits/month, 
+                Pro users get 5,000, and Team users get 25,000 shared credits.
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Can I cancel my subscription anytime?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Yes! You can cancel your Pro or Team subscription at any time from your dashboard settings. 
+                Your plan will remain active until the end of your billing period, and you'll keep any unused 
+                credits (subject to carryover limits).
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">What's included in each tier?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground space-y-2">
+                <p><strong>Free:</strong> 50 AI credits/month, full formatter access (13 languages), cloud sync, browser extension.</p>
+                <p><strong>Pro ($8.99/mo):</strong> 5,000 credits, up to 3 API keys, credit carryover (max 10K), priority support.</p>
+                <p><strong>Team ($39.99/mo):</strong> 25,000 shared credits, unlimited API keys, team management, dedicated support.</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Do I need to sign up to use formatters?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                No! The 13-language code formatter works completely offline without any sign-up. Just install the 
+                browser extension or use the web app. You only need an account to use AI features and sync your 
+                clipboard history across devices.
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">What happens to unused credits?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Free plan credits reset monthly and don't carry over. Pro and Team plans support credit carryover—
+                unused credits roll over to the next month up to your plan's limit (10,000 for Pro, 50,000 for Team). 
+                This ensures you never lose value from low-usage months.
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Is my code kept private?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Absolutely. All formatting happens locally in your browser—your code never leaves your device. 
+                AI features require sending code snippets to OpenAI's API (GPT-5), but we never store your code 
+                on our servers. You control what gets processed by AI.
               </CardContent>
             </Card>
           </div>
