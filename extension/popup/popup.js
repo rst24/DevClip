@@ -21,16 +21,26 @@ async function init() {
 // Load user data from API
 async function loadUserData() {
   try {
-    const baseUrl = apiBaseUrl.replace('/api/v1', '');
-    const response = await fetch(`${baseUrl}/api/auth/user`, {
+    // Test API key validity using the format endpoint
+    const response = await fetch(`${apiBaseUrl}/format`, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      credentials: 'include'
+      body: JSON.stringify({
+        text: '{"test":"init"}'
+      })
     });
     
     if (response.ok) {
-      userData = await response.json();
+      const data = await response.json();
+      // Extract credits from response
+      userData = {
+        plan: 'unknown', // Can't determine plan from format endpoint
+        aiCreditsBalance: data.creditsRemaining || 0,
+        aiCreditsUsed: 0
+      };
       showAccountBar();
     } else {
       showSetupBanner();
@@ -55,15 +65,18 @@ function showAccountBar() {
   const planBadge = document.getElementById('planBadge');
   const creditsInfo = document.getElementById('creditsInfo');
   
-  // Plan badge
-  planBadge.textContent = userData.plan.toUpperCase();
-  planBadge.className = `plan-badge plan-${userData.plan}`;
+  // Plan badge (show as connected if we don't know the plan)
+  if (userData.plan && userData.plan !== 'unknown') {
+    planBadge.textContent = userData.plan.toUpperCase();
+    planBadge.className = `plan-badge plan-${userData.plan}`;
+  } else {
+    planBadge.textContent = 'CONNECTED';
+    planBadge.className = 'plan-badge plan-pro'; // Use pro styling
+  }
   
   // Credits info
-  const creditsUsed = userData.aiCreditsUsed || 0;
-  const creditsTotal = userData.aiCreditsBalance + creditsUsed;
-  const creditsRemaining = userData.aiCreditsBalance;
-  creditsInfo.textContent = `${creditsRemaining}/${creditsTotal} credits`;
+  const creditsRemaining = userData.aiCreditsBalance || 0;
+  creditsInfo.textContent = `${creditsRemaining} credits`;
   
   bar.style.display = 'flex';
   document.getElementById('setupBanner').style.display = 'none';

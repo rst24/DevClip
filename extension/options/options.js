@@ -65,24 +65,28 @@ async function testConnection() {
   showAlert('Testing connection...', 'info');
   
   try {
-    // Try to fetch user data first (more reliable than format endpoint)
-    const baseUrl = apiBaseUrl.replace('/api/v1', '');
-    const response = await fetch(`${baseUrl}/api/auth/user`, {
-      method: 'GET',
+    // Test with format endpoint (uses API key authentication)
+    const response = await fetch(`${apiBaseUrl}/format`, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
-      }
+      },
+      body: JSON.stringify({
+        text: '{"test": "connection"}'
+      })
     });
     
     if (response.ok) {
-      const userData = await response.json();
-      const creditsRemaining = userData.aiCreditsBalance || 0;
-      const plan = userData.plan || 'free';
-      showAlert(`✅ Connected! Plan: ${plan.toUpperCase()}, Credits: ${creditsRemaining}`, 'success');
+      showAlert(`✅ API Key Valid! Connection successful.`, 'success');
       updateApiKeyStatus(true);
     } else if (response.status === 401) {
-      showAlert('Invalid API key. Please check your key and try again.', 'error');
+      const data = await response.json().catch(() => ({}));
+      showAlert(`❌ Invalid API key: ${data.message || 'Authentication failed'}`, 'error');
       updateApiKeyStatus(false);
+    } else if (response.status === 402) {
+      showAlert('⚠️ API key is valid but you have insufficient credits.', 'warning');
+      updateApiKeyStatus(true);
     } else {
       const data = await response.json().catch(() => ({}));
       showAlert(`Connection failed: ${data.message || response.statusText}`, 'error');
