@@ -25,7 +25,7 @@ const aiActions = [
     label: "Explain Code", 
     icon: Sparkles, 
     description: "Get detailed explanation with examples",
-    minTokens: 1,
+    minTokens: 3,
     placeholder: "Paste your code here...",
   },
   { 
@@ -33,7 +33,7 @@ const aiActions = [
     label: "Refactor Code", 
     icon: Wand2, 
     description: "Improve code quality & readability",
-    minTokens: 3,
+    minTokens: 1,
     placeholder: "Paste code to refactor...",
   },
   { 

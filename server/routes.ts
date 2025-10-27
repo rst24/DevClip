@@ -257,9 +257,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate token cost based on operation
       const tokenCosts: Record<string, number> = {
-        explain: 1,
+        explain: 3,
         summarize: 2,
-        refactor: 3,
+        refactor: 1,
       };
       const tokensRequired = tokenCosts[data.operation] || 1;
       
