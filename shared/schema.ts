@@ -46,7 +46,7 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Clipboard history items
+// Code Memory items (formerly clipboard_items) - now with AI-powered tagging and semantic search
 export const clipboardItems = pgTable(
   "clipboard_items",
   {
@@ -56,11 +56,23 @@ export const clipboardItems = pgTable(
     contentType: text("content_type").notNull(), // json, yaml, sql, code, text, log
     formatted: boolean("formatted").notNull().default(false),
     favorite: boolean("favorite").notNull().default(false),
+    
+    // AI Code Memory features
+    language: text("language"), // Auto-detected programming language (javascript, python, etc.)
+    tags: text("tags").array().default(sql`ARRAY[]::text[]`), // AI-generated and manual tags
+    embedding: jsonb("embedding"), // OpenAI embedding vector for semantic search (1536 dimensions)
+    
+    // Team collaboration features
+    isShared: boolean("is_shared").notNull().default(false), // Shared with team
+    teamId: varchar("team_id"), // Team ownership for shared snippets
+    
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_clipboard_items_user_id").on(table.userId),
     index("idx_clipboard_items_created_at").on(table.createdAt),
+    index("idx_clipboard_items_team_id").on(table.teamId),
+    index("idx_clipboard_items_tags").on(table.tags),
   ],
 );
 
