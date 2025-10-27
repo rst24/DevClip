@@ -7,6 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 
 interface AiActionsPanelProps {
   onAiAction: (text: string, operation: string) => Promise<string>;
@@ -132,68 +136,6 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
     });
   };
 
-  const formatOutput = (text: string) => {
-    // Split into sections based on markdown-like patterns
-    const lines = text.split('\n');
-    return lines.map((line, idx) => {
-      // Headers
-      if (line.startsWith('###')) {
-        return (
-          <div key={idx} className="text-base font-semibold mt-4 mb-2 text-foreground">
-            {line.replace(/^###\s*/, '')}
-          </div>
-        );
-      }
-      if (line.startsWith('##')) {
-        return (
-          <div key={idx} className="text-lg font-bold mt-5 mb-3 text-foreground">
-            {line.replace(/^##\s*/, '')}
-          </div>
-        );
-      }
-      
-      // Code blocks
-      if (line.startsWith('```')) {
-        return <div key={idx} className="text-xs text-muted-foreground">{line}</div>;
-      }
-      
-      // Bold text
-      if (line.includes('**')) {
-        const parts = line.split(/(\*\*.*?\*\*)/g);
-        return (
-          <div key={idx} className="mb-1">
-            {parts.map((part, i) => 
-              part.startsWith('**') && part.endsWith('**') ? (
-                <span key={i} className="font-semibold text-foreground">
-                  {part.slice(2, -2)}
-                </span>
-              ) : (
-                <span key={i} className="text-muted-foreground">{part}</span>
-              )
-            )}
-          </div>
-        );
-      }
-      
-      // Bullet points
-      if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
-        return (
-          <div key={idx} className="flex gap-2 mb-1 text-muted-foreground">
-            <span className="text-primary">•</span>
-            <span>{line.replace(/^[\s-•]+/, '')}</span>
-          </div>
-        );
-      }
-      
-      // Regular text
-      return line.trim() ? (
-        <div key={idx} className="mb-1 text-muted-foreground">{line}</div>
-      ) : (
-        <div key={idx} className="h-2" />
-      );
-    });
-  };
-
   return (
     <div className="space-y-6">
       {/* Header with Model Info */}
@@ -209,7 +151,10 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
                 </Badge>
               </CardTitle>
               <CardDescription>
-                {modelTier.description} • {credits} credits remaining
+                {modelTier.description} • Automatic model selection based on your plan
+              </CardDescription>
+              <CardDescription className="text-xs">
+                {credits} credits remaining
               </CardDescription>
             </div>
             {plan === "free" && (
@@ -230,34 +175,38 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
           const isSelected = selectedAction === action.id;
           
           return (
-            <Card
+            <button
               key={action.id}
+              type="button"
               className={cn(
-                "cursor-pointer transition-all border-2",
-                disabled ? "opacity-60 cursor-not-allowed" : "hover-elevate active-elevate-2",
-                isSelected && !disabled ? "border-primary" : "border-transparent"
+                "text-left w-full rounded-lg border-2 p-4 transition-all",
+                disabled 
+                  ? "opacity-60 cursor-not-allowed" 
+                  : "hover-elevate active-elevate-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                isSelected && !disabled ? "border-primary bg-primary/5" : "border-border"
               )}
               onClick={() => !disabled && handleAiAction(action.id)}
+              disabled={disabled}
+              aria-label={`${action.label} - ${action.description} - ${action.minCredits} credits`}
+              aria-pressed={isSelected}
               data-testid={`button-ai-${action.id}`}
             >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className={cn(
-                    "p-2.5 rounded-lg",
-                    isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                  )}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm mb-1">{action.label}</div>
-                    <div className="text-xs text-muted-foreground mb-2">{action.description}</div>
-                    <Badge variant="outline" className="text-xs">
-                      {action.minCredits} credits
-                    </Badge>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div className={cn(
+                  "p-2.5 rounded-lg shrink-0",
+                  isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                )}>
+                  <Icon className="h-5 w-5" />
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm mb-1">{action.label}</div>
+                  <div className="text-xs text-muted-foreground mb-2">{action.description}</div>
+                  <Badge variant="outline" className="text-xs">
+                    {action.minCredits} credits
+                  </Badge>
+                </div>
+              </div>
+            </button>
           );
         })}
       </div>
@@ -282,7 +231,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
             <TabsContent value="input" className="mt-0">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">
+                  <label htmlFor="ai-input-textarea" className="text-sm font-medium">
                     {selectedAction 
                       ? aiActions.find(a => a.id === selectedAction)?.placeholder 
                       : "Select an AI action above"}
@@ -292,6 +241,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
                   </span>
                 </div>
                 <Textarea
+                  id="ai-input-textarea"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={
@@ -333,9 +283,59 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
                 </div>
                 
                 {output ? (
-                  <ScrollArea className="h-[400px] w-full rounded-md border bg-muted/30 p-4">
-                    <div className="space-y-1 text-sm">
-                      {formatOutput(output)}
+                  <ScrollArea className="h-[400px] w-full rounded-md border bg-muted/30">
+                    <div className="p-4 prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight]}
+                        components={{
+                          code: ({ inline, className, children, ...props }: any) => {
+                            if (inline) {
+                              return (
+                                <code className="px-1.5 py-0.5 rounded bg-muted text-sm font-mono" {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                            return (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          pre: ({ children, ...props }: any) => (
+                            <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-md p-4 overflow-x-auto" {...props}>
+                              {children}
+                            </pre>
+                          ),
+                          h1: ({ children, ...props }: any) => (
+                            <h1 className="text-2xl font-bold mt-6 mb-3 text-foreground" {...props}>{children}</h1>
+                          ),
+                          h2: ({ children, ...props }: any) => (
+                            <h2 className="text-xl font-bold mt-5 mb-2 text-foreground" {...props}>{children}</h2>
+                          ),
+                          h3: ({ children, ...props }: any) => (
+                            <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...props}>{children}</h3>
+                          ),
+                          ul: ({ children, ...props }: any) => (
+                            <ul className="list-disc pl-6 space-y-1 text-muted-foreground" {...props}>{children}</ul>
+                          ),
+                          ol: ({ children, ...props }: any) => (
+                            <ol className="list-decimal pl-6 space-y-1 text-muted-foreground" {...props}>{children}</ol>
+                          ),
+                          li: ({ children, ...props }: any) => (
+                            <li className="text-muted-foreground" {...props}>{children}</li>
+                          ),
+                          p: ({ children, ...props }: any) => (
+                            <p className="mb-3 text-muted-foreground leading-relaxed" {...props}>{children}</p>
+                          ),
+                          strong: ({ children, ...props }: any) => (
+                            <strong className="font-semibold text-foreground" {...props}>{children}</strong>
+                          ),
+                        }}
+                      >
+                        {output}
+                      </ReactMarkdown>
                     </div>
                   </ScrollArea>
                 ) : (
