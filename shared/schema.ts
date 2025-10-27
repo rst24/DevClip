@@ -70,7 +70,8 @@ export const insertClipboardItemSchema = createInsertSchema(clipboardItems).omit
   userId: true,
 });
 
-export type InsertClipboardItem = z.infer<typeof insertClipboardItemSchema>;
+export type InsertClipboardItemRequest = z.infer<typeof insertClipboardItemSchema>;
+export type InsertClipboardItem = typeof clipboardItems.$inferInsert;
 export type ClipboardItem = typeof clipboardItems.$inferSelect;
 
 // AI operation requests for tracking usage with token costs

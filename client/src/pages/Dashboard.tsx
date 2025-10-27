@@ -21,11 +21,9 @@ const SettingsPanel = lazy(() => import("@/components/SettingsPanel").then(m => 
 const FeedbackForm = lazy(() => import("@/components/FeedbackForm").then(m => ({ default: m.FeedbackForm })));
 import { DashboardHome } from "@/components/DashboardHome";
 import { 
-  History, 
   Wand2, 
   Settings, 
   MessageSquare, 
-  Search,
   Sparkles,
   Loader2,
   LogOut,
@@ -35,7 +33,6 @@ import {
   Shield,
   Download,
   LayoutDashboard,
-  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,18 +43,16 @@ import type { ClipboardItem, User } from "@shared/schema";
 
 export default function Dashboard() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [localItems, setLocalItems] = useState<LocalClipboardItem[]>([]);
-  const [activeTab, setActiveTab] = useState("history");
-  const [historyFilter, setHistoryFilter] = useState<"all" | "formatted" | "favorites">("all");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [, setLocation] = useLocation();
   const { toast} = useToast();
   const { user, isLoading: authLoading, isAuthenticated} = useAuth();
 
-  // Switch to dashboard tab for authenticated users on initial load
+  // Switch to formatters tab for unauthenticated users on initial load
   useEffect(() => {
-    if (!authLoading && isAuthenticated && activeTab === "history") {
-      setActiveTab("dashboard");
+    if (!authLoading && !isAuthenticated && activeTab === "dashboard") {
+      setActiveTab("formatters");
     }
   }, [authLoading, isAuthenticated]);
 
@@ -366,20 +361,6 @@ export default function Dashboard() {
     window.location.href = "/api/login";
   };
 
-  // Determine which items to display and filter
-  const displayItems = isAuthenticated ? clipboardItems : localItems;
-  let filteredItems = displayItems.filter(item =>
-    item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.contentType.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  // Apply history filter
-  if (historyFilter === "formatted") {
-    filteredItems = filteredItems.filter(item => item.formatted);
-  } else if (historyFilter === "favorites") {
-    filteredItems = filteredItems.filter(item => item.favorite);
-  }
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -497,17 +478,13 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-6' : 'grid-cols-2'} max-w-4xl mx-auto`}>
+          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-5' : 'grid-cols-1'} max-w-4xl mx-auto`}>
             {isAuthenticated && (
               <TabsTrigger value="dashboard" data-testid="tab-dashboard">
                 <LayoutDashboard className="h-4 w-4 mr-2" />
                 Dashboard
               </TabsTrigger>
             )}
-            <TabsTrigger value="history" data-testid="tab-history">
-              <History className="h-4 w-4 mr-2" />
-              History
-            </TabsTrigger>
             <TabsTrigger value="formatters" data-testid="tab-formatters">
               <Wand2 className="h-4 w-4 mr-2" />
               Formatters
@@ -563,104 +540,6 @@ export default function Dashboard() {
               />
             </TabsContent>
           )}
-
-          {/* Clipboard History */}
-          <TabsContent value="history" className="space-y-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative flex-1 max-w-md min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search clipboard history..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={historyFilter === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setHistoryFilter("all")}
-                  data-testid="filter-all"
-                >
-                  All
-                </Button>
-                <Button
-                  variant={historyFilter === "formatted" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setHistoryFilter("formatted")}
-                  data-testid="filter-formatted"
-                >
-                  Formatted
-                </Button>
-                <Button
-                  variant={historyFilter === "favorites" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setHistoryFilter("favorites")}
-                  data-testid="filter-favorites"
-                >
-                  Favorites
-                </Button>
-                {isAuthenticated && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/history"] })}
-                    data-testid="button-refresh-history"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {!isAuthenticated && (
-              <div className="bg-muted/50 border rounded-lg p-4 text-sm">
-                <p className="text-muted-foreground">
-                  You're using DevClip in local mode. Your clipboard items are stored in your browser. 
-                  <button
-                    className="text-primary hover:underline ml-1"
-                    onClick={handleSignIn}
-                    data-testid="button-signin-prompt"
-                  >
-                    Sign in
-                  </button>
-                  {" "}to sync across devices and unlock AI features.
-                </p>
-              </div>
-            )}
-
-            {historyLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="text-center py-12">
-                <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {searchQuery ? "No matching items" : "No clipboard items yet"}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {searchQuery 
-                    ? "Try a different search query" 
-                    : "Your clipboard history will appear here"}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredItems.map((item) => (
-                  <ClipboardCard
-                    key={item.id}
-                    item={item}
-                    onCopy={handleCopyToClipboard}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           {/* Formatters */}
           <TabsContent value="formatters">

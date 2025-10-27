@@ -272,11 +272,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Call OpenAI
+      // Enhanced AI prompts for better product value
       const systemPrompts: Record<string, string> = {
-        explain: "You are a helpful code assistant. Explain the following code or text clearly and concisely.",
-        summarize: "You are a helpful assistant. Summarize the following text in a clear and concise way.",
-        refactor: "You are an expert code reviewer. Suggest improvements and refactor the following code. Provide clean, optimized code."
+        explain: `You are a senior software engineer who excels at teaching. Provide a comprehensive explanation of the code following this structure:
+
+**Overview**: Brief summary of what the code does (1-2 sentences)
+
+**How It Works**: Step-by-step explanation of the logic
+
+**Key Concepts**: Important patterns, algorithms, or techniques used
+
+**Potential Issues**: Any edge cases, bugs, or areas of concern
+
+**Best Practices**: Suggestions for improvement (if applicable)
+
+Be clear, concise, and use examples where helpful. Format your response in markdown.`,
+
+        summarize: `You are a log analysis expert. Analyze the following logs and provide a structured summary:
+
+**Severity Breakdown**:
+- 🔴 Critical Errors: [count] - [brief description]
+- ⚠️  Warnings: [count] - [brief description]
+- ℹ️  Info: [count] - [brief description]
+
+**Key Findings**:
+[List 3-5 most important discoveries]
+
+**Timeline**:
+[When did issues occur? Any patterns?]
+
+**Actionable Insights**:
+[Specific recommendations to fix issues]
+
+Be specific and actionable. Format your response in markdown.`,
+
+        refactor: `You are an expert code reviewer. Analyze the code and provide improvements in this structure:
+
+**Issues Found**:
+[List specific problems: performance, security, readability, bugs]
+
+**Suggested Changes**:
+\`\`\`
+[Provide the refactored code here - clean, optimized, with comments]
+\`\`\`
+
+**Improvements Made**:
+- [List specific improvements with brief explanations]
+
+**Why This Is Better**:
+[Explain the benefits of these changes]
+
+Be specific and practical. Format your response in markdown with proper code blocks.`
       };
       
       // Use tier-specific AI model based on user's plan
