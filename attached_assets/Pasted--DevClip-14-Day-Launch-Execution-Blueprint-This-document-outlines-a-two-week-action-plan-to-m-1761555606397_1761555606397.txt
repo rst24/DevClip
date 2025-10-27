@@ -1,0 +1,97 @@
+# 🚀 DevClip — 14-Day Launch Execution Blueprint
+
+This document outlines a two-week action plan to move DevClip from *production-ready* to *market-active*.  
+Focus: reach the first 100 paying users through visible distribution, polished onboarding, and automated growth tracking.
+
+---
+
+## 🧭 Phase 0 – Preparation (Day 0)
+
+**Objective:** Finalize assets and ensure a clean technical + marketing foundation.
+
+- ✅ Verify production environment (`devclip.xyz`, SSL, Stripe webhooks).
+- ✅ Confirm Replit secrets: `STRIPE_PRICE_FREE`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`.
+- ✅ Test subscription lifecycle (upgrade, downgrade, cancel).
+- ✅ Run full regression on formatters + AI endpoints.
+- ✅ Update favicon, OG tags, and SEO metadata (`AI JSON formatter`, `developer clipboard`, `log cleaner`).
+- ✅ Create unified changelog and press kit folder (`/public/press`).
+
+---
+
+## 📆 Phase 1 – Visibility & Launch (Days 1–7)
+
+### **1. Chrome Web Store Release**
+- Prepare assets: 128 / 512 px icons, 3 screenshots, promo banner.
+- Listing copy:
+  > “Clipboard Copilot for Developers — format JSON, logs, SQL, and explain code instantly.”
+- Publish to Chrome & Edge stores; enable auto-updates.
+- Add “Install from Web Store” CTA to landing page header.
+
+### **2. Product Hunt & Developer Channels**
+- Launch Product Hunt campaign (Tuesday 8 AM PT best slot).
+- Create short demo GIF + 30-sec Loom walkthrough.
+- Post announcement threads:
+  - **Reddit:** r/webdev, r/javascript, r/programming  
+  - **Dev.to / Hashnode:** “How I built an AI Clipboard Assistant in Replit”
+- Pin Tweet/X thread with demo & credit giveaway (1 000 free AI credits for early adopters).
+
+### **3. Content & SEO**
+- Publish 3 micro-blogs (600 words max):
+  - “Stop Alt-Tabbing — Format JSON in One Click”
+  - “How DevClip Uses GPT-5 to Refactor Code”
+  - “Integrate DevClip into Your Agentic Workflow”
+- Cross-link posts with `?utm_source=devclip-launch`.
+
+---
+
+## 🧩 Phase 2 – Engagement & Conversion (Days 8–14)
+
+### **1. In-App & Email Automation**
+- Add upgrade banner at 80 % credit usage:
+  > “You’re almost out — unlock 5 000 AI credits with Pro.”
+- Enable transactional emails:
+  - Low-credits alert (<10 %)
+  - Subscription renewal notice
+  - Payment failure notice
+- Integrate PostHog or Tinybird for cohort analytics:
+  - `install → first_use → AI_call → upgrade`
+
+### **2. API Docs & Developer Hub**
+- Deploy `/docs` using **Docusaurus** or **Redocly**.
+- Include curl + Node.js examples for:
+  - `/v1/format`
+  - `/v1/ai/explain|refactor|summarizeLogs`
+- Add “Generate API Key” button linking to dashboard.
+
+### **3. Team & B2B Readiness**
+- Implement shared credit metrics and member roles.
+- Prepare LinkedIn outreach templates targeting 2-10 dev teams.
+- Offer early-adopter deal: $39.99 → $29.99 for first 50 teams.
+
+---
+
+## 📊 Phase 3 – Measurement & Iteration
+
+| KPI | Target | Tool |
+|-----|---------|------|
+| Chrome installs | 1 000 + | Chrome Dev Console |
+| Activation rate | 70 % | PostHog |
+| Free → Pro conversion | 5 % | Stripe Dashboard |
+| Retention (30 days) | 60 % | Analytics DB |
+| Support tickets | < 5/week | support@devclip.xyz |
+
+---
+
+## 🧠 Post-Launch Maintenance
+- Weekly changelog post on X/LinkedIn.
+- Auto-publish usage insights via dashboard newsletter.
+- Collect testimonials for web store & landing page.
+- Plan quarterly feature roadmap (VS Code plugin, Desktop bridge).
+
+---
+
+### ✅ Summary
+**Goal:** Validate market demand, establish traction, and generate first $1 000 MRR in < 30 days.  
+**Focus:** Visibility → Activation → Conversion → Retention.  
+This blueprint bridges technical execution with marketing automation, keeping DevClip lean, scalable, and aligned with its mission:  
+> *“Automate developer productivity, one clipboard at a time.”*
