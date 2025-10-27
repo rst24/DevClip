@@ -33,8 +33,8 @@ const plans = [
     icon: Crown,
     description: "Perfect for individual developers",
     features: [
-      "5,000 AI credits/month",
-      "Credit carryover (up to 10,000)",
+      "300 AI tokens/month",
+      "Token carryover (up to 600)",
       "Up to 6 API keys",
       "Code explanation & refactoring",
       "Log summarization",
@@ -52,8 +52,8 @@ const plans = [
     icon: Users,
     description: "For development teams",
     features: [
-      "25,000 AI credits/month",
-      "Credit carryover (up to 50,000)",
+      "1,000 AI tokens/month",
+      "Token carryover (up to 2,000)",
       "Unlimited API keys",
       "Shared snippet library",
       "Team workspace",
@@ -66,7 +66,7 @@ const plans = [
 ];
 
 const freeFeatures = [
-  "50 AI credits/month",
+  "100 AI tokens/month",
   "Local clipboard history",
   "All formatters (JSON, YAML, SQL, etc.)",
   "Privacy-first design",

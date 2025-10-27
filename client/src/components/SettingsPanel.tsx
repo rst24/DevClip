@@ -26,9 +26,9 @@ interface SettingsPanelProps {
   user: {
     email: string;
     plan: "free" | "pro" | "team";
-    aiCreditsBalance: number;
-    aiCreditsUsed?: number;
-    creditCarryover?: number;
+    tokenBalance: number;
+    tokensUsed?: number;
+    tokenCarryover?: number;
     firstName?: string;
     lastName?: string;
   };
@@ -94,9 +94,9 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
           <div>
             <div className="text-sm text-muted-foreground mb-1">Monthly Allocation</div>
             <div className="text-sm font-medium" data-testid="text-monthly-allocation">
-              {user.plan === "free" ? "50 credits" : 
-               user.plan === "pro" ? "5,000 credits" :
-               "25,000 credits"}
+              {user.plan === "free" ? "100 tokens" : 
+               user.plan === "pro" ? "300 tokens" :
+               "1,000 tokens"}
             </div>
           </div>
 
@@ -107,38 +107,38 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
             <div>
               <div className="text-sm font-medium">Current Balance</div>
               <div className="text-xs text-muted-foreground">
-                Available credits
+                Available tokens
               </div>
             </div>
-            <Badge variant="outline" data-testid="text-credits-balance">
-              {(user.aiCreditsBalance ?? 50).toLocaleString()} credits
+            <Badge variant="outline" data-testid="text-tokens-balance">
+              {(user.tokenBalance ?? 100).toLocaleString()} tokens
             </Badge>
           </div>
 
-          {/* Credits Used This Month */}
+          {/* Tokens Used This Month */}
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">Used This Month</div>
               <div className="text-xs text-muted-foreground">
-                Credits consumed
+                Tokens consumed
               </div>
             </div>
-            <Badge variant="secondary" data-testid="text-credits-used">
-              {(user.aiCreditsUsed || 0).toLocaleString()} credits
+            <Badge variant="secondary" data-testid="text-tokens-used">
+              {(user.tokensUsed || 0).toLocaleString()} tokens
             </Badge>
           </div>
 
-          {/* Carryover Credits (Pro/Team only) */}
-          {user.plan !== "free" && (user.creditCarryover ?? 0) > 0 && (
+          {/* Carryover Tokens (Pro/Team only) */}
+          {user.plan !== "free" && (user.tokenCarryover ?? 0) > 0 && (
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium">Carryover Credits</div>
+                <div className="text-sm font-medium">Carryover Tokens</div>
                 <div className="text-xs text-muted-foreground">
                   From previous month
                 </div>
               </div>
-              <Badge variant="outline" data-testid="text-credits-carryover">
-                {(user.creditCarryover ?? 0).toLocaleString()} credits
+              <Badge variant="outline" data-testid="text-tokens-carryover">
+                {(user.tokenCarryover ?? 0).toLocaleString()} tokens
               </Badge>
             </div>
           )}
@@ -149,27 +149,27 @@ export function SettingsPanel({ user, onUpgrade, onManageBilling }: SettingsPane
               <div className="text-xs text-muted-foreground">Usage</div>
               <div className="text-xs text-muted-foreground" data-testid="text-usage-percentage">
                 {(() => {
-                  const monthlyAllocation = user.plan === "free" ? 50 : user.plan === "pro" ? 5000 : 25000;
-                  const usedCredits = user.aiCreditsUsed || 0;
-                  const percentage = Math.min(100, Math.round((usedCredits / monthlyAllocation) * 100));
+                  const monthlyAllocation = user.plan === "free" ? 100 : user.plan === "pro" ? 300 : 1000;
+                  const usedTokens = user.tokensUsed || 0;
+                  const percentage = Math.min(100, Math.round((usedTokens / monthlyAllocation) * 100));
                   return `${percentage}%`;
                 })()}
               </div>
             </div>
             <Progress 
               value={(() => {
-                const monthlyAllocation = user.plan === "free" ? 50 : user.plan === "pro" ? 5000 : 25000;
-                const usedCredits = user.aiCreditsUsed || 0;
-                return Math.min(100, (usedCredits / monthlyAllocation) * 100);
+                const monthlyAllocation = user.plan === "free" ? 100 : user.plan === "pro" ? 300 : 1000;
+                const usedTokens = user.tokensUsed || 0;
+                return Math.min(100, (usedTokens / monthlyAllocation) * 100);
               })()} 
-              data-testid="progress-credit-usage"
+              data-testid="progress-token-usage"
             />
           </div>
 
-          {/* Credit Cost Information */}
+          {/* Token Cost Information */}
           <div className="rounded-md bg-muted p-3">
             <div className="text-xs text-muted-foreground">
-              AI actions cost 1-3 credits based on complexity
+              AI actions cost 1-3 tokens based on complexity
             </div>
           </div>
 

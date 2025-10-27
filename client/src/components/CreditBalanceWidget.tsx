@@ -18,9 +18,9 @@ export function CreditBalanceWidget({
 }: CreditBalanceWidgetProps) {
   // Get monthly allocation based on plan
   const getAllocation = () => {
-    if (plan === "free") return 50;
-    if (plan === "pro") return 5000;
-    return 25000; // team
+    if (plan === "free") return 100;
+    if (plan === "pro") return 300;
+    return 1000; // team
   };
 
   const allocation = getAllocation();
@@ -35,7 +35,7 @@ export function CreditBalanceWidget({
 
   const getTooltipText = () => {
     const used = allocation - balance;
-    return `${used.toLocaleString()} of ${allocation.toLocaleString()} credits used this month`;
+    return `${used.toLocaleString()} of ${allocation.toLocaleString()} tokens used this month`;
   };
 
   return (

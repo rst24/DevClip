@@ -255,19 +255,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Calculate credit cost based on operation
-      const creditCosts: Record<string, number> = {
+      // Calculate token cost based on operation
+      const tokenCosts: Record<string, number> = {
         explain: 1,
         summarize: 2,
         refactor: 3,
       };
-      const creditsRequired = creditCosts[data.operation] || 1;
+      const tokensRequired = tokenCosts[data.operation] || 1;
       
-      if (user.aiCreditsBalance < creditsRequired) {
+      if (user.tokenBalance < tokensRequired) {
         return res.status(402).json({ 
-          message: "Insufficient credits",
-          creditsRequired,
-          creditsBalance: user.aiCreditsBalance,
+          message: "Insufficient tokens",
+          tokensRequired,
+          tokenBalance: user.tokenBalance,
           upgradeUrl: "/upgrade"
         });
       }
@@ -292,13 +292,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const result = completion.choices[0]?.message?.content || "No result";
-      const tokensUsed = completion.usage?.total_tokens || 0;
+      const apiTokensUsed = completion.usage?.total_tokens || 0;
       
       // Estimate cost (rough: $0.002-$0.006 per operation)
-      const estimatedCostCents = Math.ceil(tokensUsed * 0.00001 * 100); // Convert to cents
+      const estimatedCostCents = Math.ceil(apiTokensUsed * 0.00001 * 100); // Convert to cents
       
-      // Deduct credits
-      await storage.deductCredits(userId, creditsRequired);
+      // Deduct tokens
+      await storage.deductTokens(userId, tokensRequired);
       
       // Log AI operation
       await storage.createAiOperation({
@@ -306,14 +306,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         operationType: data.operation,
         inputText: data.text,
         outputText: result,
-        tokensUsed,
-        creditsUsed: creditsRequired,
+        apiTokensUsed,
+        tokensCharged: tokensRequired,
         estimatedCost: estimatedCostCents,
       });
       
-      res.json({ result, creditsUsed: creditsRequired });
+      res.json({ result, tokensCharged: tokensRequired });
     } catch (error: any) {
-      if (error.message === "Insufficient credits") {
+      if (error.message === "Insufficient tokens") {
         return res.status(402).json({ message: error.message });
       }
       console.error("AI processing error - Full details:", {
@@ -686,16 +686,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate summary stats
       const totalOperations = operations.length;
-      const totalCreditsUsed = operations.reduce((sum, op) => sum + op.creditsUsed, 0);
+      const totalTokensUsed = operations.reduce((sum, op) => sum + op.tokensCharged, 0);
       
       // Group by operation type
-      const byType: Record<string, { count: number; credits: number }> = {};
+      const byType: Record<string, { count: number; tokens: number }> = {};
       operations.forEach(op => {
         if (!byType[op.operationType]) {
-          byType[op.operationType] = { count: 0, credits: 0 };
+          byType[op.operationType] = { count: 0, tokens: 0 };
         }
         byType[op.operationType].count++;
-        byType[op.operationType].credits += op.creditsUsed;
+        byType[op.operationType].tokens += op.tokensCharged;
       });
       
       // Generate complete 30-day time series with zero-fill
@@ -705,10 +705,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29); // Include today = 30 days
       
       // Initialize all 30 days with zeros
-      const dailyData: Record<string, { date: string; operations: number; credits: number }> = {};
+      const dailyData: Record<string, { date: string; operations: number; tokens: number }> = {};
       for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
         const dateKey = d.toISOString().split('T')[0];
-        dailyData[dateKey] = { date: dateKey, operations: 0, credits: 0 };
+        dailyData[dateKey] = { date: dateKey, operations: 0, tokens: 0 };
       }
       
       // Fill in actual data
@@ -719,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const dateKey = opDate.toISOString().split('T')[0];
           if (dailyData[dateKey]) {
             dailyData[dateKey].operations++;
-            dailyData[dateKey].credits += op.creditsUsed;
+            dailyData[dateKey].tokens += op.tokensCharged;
           }
         }
       });
@@ -732,15 +732,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         summary: {
           totalOperations,
-          totalCreditsUsed,
-          averageCreditsPerOperation: totalOperations > 0 
-            ? (totalCreditsUsed / totalOperations).toFixed(2) 
+          totalTokensUsed,
+          averageTokensPerOperation: totalOperations > 0 
+            ? (totalTokensUsed / totalOperations).toFixed(2) 
             : 0,
         },
         byOperationType: Object.entries(byType).map(([type, data]) => ({
           operationType: type,
           count: data.count,
-          credits: data.credits,
+          tokens: data.tokens,
         })),
         dailyTimeSeries, // Complete 30 days with zero-fill
         recentOperations: operations.slice(0, 10), // Already sorted DESC by createdAt
@@ -783,9 +783,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName,
         lastName: user.lastName,
         plan: user.plan,
-        aiCreditsBalance: user.aiCreditsBalance,
-        aiCreditsUsed: user.aiCreditsUsed,
-        creditCarryover: user.creditCarryover,
+        tokenBalance: user.tokenBalance,
+        tokensUsed: user.tokensUsed,
+        tokenCarryover: user.tokenCarryover,
         isAdmin: user.isAdmin,
         stripeCustomerId: user.stripeCustomerId,
         createdAt: user.createdAt,
@@ -802,13 +802,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id/credits", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { aiCreditsBalance } = req.body;
+      const { tokenBalance } = req.body;
 
-      if (typeof aiCreditsBalance !== 'number' || aiCreditsBalance < 0) {
-        return res.status(400).json({ message: "Invalid credit amount" });
+      if (typeof tokenBalance !== 'number' || tokenBalance < 0) {
+        return res.status(400).json({ message: "Invalid token amount" });
       }
 
-      const updatedUser = await storage.updateUserCredits(id, aiCreditsBalance);
+      const updatedUser = await storage.updateUserTokens(id, tokenBalance);
       
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
@@ -819,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
-          aiCreditsBalance: updatedUser.aiCreditsBalance,
+          tokenBalance: updatedUser.tokenBalance,
         }
       });
     } catch (error: any) {
@@ -867,9 +867,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const proUsers = users.filter((u: User) => u.plan === 'pro').length;
       const teamUsers = users.filter((u: User) => u.plan === 'team').length;
       
-      // Calculate total credits distributed
-      const totalCredits = users.reduce((sum: number, u: User) => sum + (u.aiCreditsBalance || 0), 0);
-      const totalCreditsUsed = users.reduce((sum: number, u: User) => sum + (u.aiCreditsUsed || 0), 0);
+      // Calculate total tokens distributed
+      const totalTokens = users.reduce((sum: number, u: User) => sum + (u.tokenBalance || 0), 0);
+      const totalTokensUsed = users.reduce((sum: number, u: User) => sum + (u.tokensUsed || 0), 0);
 
       res.json({
         users: {
@@ -878,10 +878,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pro: proUsers,
           team: teamUsers,
         },
-        credits: {
-          total: totalCredits,
-          used: totalCreditsUsed,
-          remaining: totalCredits - totalCreditsUsed,
+        tokens: {
+          total: totalTokens,
+          used: totalTokensUsed,
+          remaining: totalTokens - totalTokensUsed,
         },
       });
     } catch (error: any) {

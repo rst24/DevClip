@@ -26,7 +26,7 @@ interface UserProfileDropdownProps {
     lastName?: string;
     profileImageUrl?: string;
     plan: "free" | "pro" | "team";
-    aiCreditsBalance: number;
+    tokenBalance: number;
   };
   onNavigate: (tab: string) => void;
   onLogout: () => void;
@@ -56,11 +56,11 @@ export function UserProfileDropdown({
 
   const isPaidPlan = user.plan === "pro" || user.plan === "team";
 
-  // Get credit status color
-  const getCreditStatusColor = () => {
-    const balance = user.aiCreditsBalance;
+  // Get token status color
+  const getTokenStatusColor = () => {
+    const balance = user.tokenBalance;
     const allocation =
-      user.plan === "free" ? 50 : user.plan === "pro" ? 5000 : 25000;
+      user.plan === "free" ? 100 : user.plan === "pro" ? 300 : 1000;
     const percentage = (balance / allocation) * 100;
 
     if (percentage > 50) return "text-green-600 dark:text-green-400";
@@ -100,19 +100,19 @@ export function UserProfileDropdown({
 
         <DropdownMenuSeparator />
 
-        {/* Credits Balance */}
+        {/* Tokens Balance */}
         <div className="px-2 py-1.5">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Zap className="h-3.5 w-3.5" />
-              <span>Credits</span>
+              <span>Tokens</span>
             </div>
             <Badge
               variant="outline"
-              className={getCreditStatusColor()}
-              data-testid="badge-credits-balance"
+              className={getTokenStatusColor()}
+              data-testid="badge-tokens-balance"
             >
-              {user.aiCreditsBalance.toLocaleString()}
+              {user.tokenBalance.toLocaleString()}
             </Badge>
           </div>
         </div>

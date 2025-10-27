@@ -39,7 +39,7 @@ export function UpgradePrompt({ open, onOpenChange, feature = "AI features" }: U
                 <Check className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">50 Free AI Credits Monthly</p>
+                <p className="font-medium text-sm">100 Free AI Tokens Monthly</p>
                 <p className="text-sm text-muted-foreground">
                   Explain code, refactor snippets, summarize logs
                 </p>

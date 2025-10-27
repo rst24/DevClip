@@ -15,7 +15,7 @@ import "highlight.js/styles/github-dark.css";
 interface AiActionsPanelProps {
   onAiAction: (text: string, operation: string) => Promise<string>;
   plan: "free" | "pro" | "team";
-  credits: number;
+  tokens: number;
   onUpgrade: () => void;
 }
 
@@ -25,7 +25,7 @@ const aiActions = [
     label: "Explain Code", 
     icon: Sparkles, 
     description: "Get detailed explanation with examples",
-    minCredits: 2,
+    minTokens: 1,
     placeholder: "Paste your code here...",
   },
   { 
@@ -33,7 +33,7 @@ const aiActions = [
     label: "Refactor Code", 
     icon: Wand2, 
     description: "Improve code quality & readability",
-    minCredits: 3,
+    minTokens: 3,
     placeholder: "Paste code to refactor...",
   },
   { 
@@ -41,7 +41,7 @@ const aiActions = [
     label: "Summarize Logs", 
     icon: ScrollText, 
     description: "Extract key insights from logs",
-    minCredits: 2,
+    minTokens: 2,
     placeholder: "Paste your logs here...",
   },
 ];
@@ -65,7 +65,7 @@ const AI_MODEL_TIERS = {
   },
 };
 
-export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActionsPanelProps) {
+export function AiActionsPanel({ onAiAction, plan, tokens, onUpgrade }: AiActionsPanelProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,7 +73,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const canUseAi = credits > 0;
+  const canUseAi = tokens > 0;
   const modelTier = AI_MODEL_TIERS[plan];
 
   const handleAiAction = async (operation: string) => {
@@ -96,10 +96,10 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
     }
 
     const action = aiActions.find(a => a.id === operation);
-    if (action && credits < action.minCredits) {
+    if (action && tokens < action.minTokens) {
       toast({
-        title: "Not enough credits",
-        description: `This action requires ${action.minCredits} credits. You have ${credits}.`,
+        title: "Not enough tokens",
+        description: `This action requires ${action.minTokens} tokens. You have ${tokens}.`,
         variant: "destructive",
       });
       return;
@@ -112,7 +112,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
       setOutput(result);
       toast({
         title: "✨ AI processing complete",
-        description: `Used ${action?.minCredits || 2} credits`,
+        description: `Used ${action?.minTokens || 2} tokens`,
       });
     } catch (error) {
       toast({
@@ -154,7 +154,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
                 {modelTier.description} • Automatic model selection based on your plan
               </CardDescription>
               <CardDescription className="text-xs">
-                {credits} credits remaining
+                {tokens} tokens remaining
               </CardDescription>
             </div>
             {plan === "free" && (
@@ -171,7 +171,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {aiActions.map((action) => {
           const Icon = action.icon;
-          const disabled = loading || !canUseAi || credits < action.minCredits;
+          const disabled = loading || !canUseAi || tokens < action.minTokens;
           const isSelected = selectedAction === action.id;
           
           return (
@@ -187,7 +187,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
               )}
               onClick={() => !disabled && handleAiAction(action.id)}
               disabled={disabled}
-              aria-label={`${action.label} - ${action.description} - ${action.minCredits} credits`}
+              aria-label={`${action.label} - ${action.description} - ${action.minTokens} tokens`}
               aria-pressed={isSelected}
               data-testid={`button-ai-${action.id}`}
             >
@@ -202,7 +202,7 @@ export function AiActionsPanel({ onAiAction, plan, credits, onUpgrade }: AiActio
                   <div className="font-semibold text-sm mb-1">{action.label}</div>
                   <div className="text-xs text-muted-foreground mb-2">{action.description}</div>
                   <Badge variant="outline" className="text-xs">
-                    {action.minCredits} credits
+                    {action.minTokens} tokens
                   </Badge>
                 </div>
               </div>

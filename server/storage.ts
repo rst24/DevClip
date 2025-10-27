@@ -30,10 +30,10 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   updateUserPlan(userId: string, plan: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User>;
-  updateUserCredits(userId: string, creditsBalance: number, creditsUsed?: number): Promise<User>;
+  updateUserTokens(userId: string, tokenBalance: number, tokensUsed?: number): Promise<User>;
   updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined>;
-  deductCredits(userId: string, amount: number): Promise<User>;
-  refreshMonthlyCredits(userId: string): Promise<User>;
+  deductTokens(userId: string, amount: number): Promise<User>;
+  refreshMonthlyTokens(userId: string): Promise<User>;
   
   // Clipboard operations
   getClipboardItems(userId: string, limit?: number): Promise<ClipboardItem[]>;
@@ -113,9 +113,9 @@ export class PostgresStorage implements IStorage {
           ...userData,
           // Set defaults for new users
           plan: "free",
-          aiCreditsBalance: 50,
-          aiCreditsUsed: 0,
-          creditCarryover: 0,
+          tokenBalance: 100,
+          tokensUsed: 0,
+          tokenCarryover: 0,
           abTestVariant: Math.random() > 0.5 ? "control" : "testA", // Simple A/B split
         })
         .returning();
@@ -134,17 +134,17 @@ export class PostgresStorage implements IStorage {
     stripeCustomerId?: string, 
     stripeSubscriptionId?: string
   ): Promise<User> {
-    // Credit allocation based on plan
-    const creditsMap: Record<string, number> = {
-      free: 50,
-      pro: 5000,
-      team: 25000,
+    // Token allocation based on plan
+    const tokensMap: Record<string, number> = {
+      free: 100,
+      pro: 300,
+      team: 1000,
     };
     
     const [user] = await db.update(users)
       .set({
         plan,
-        aiCreditsBalance: creditsMap[plan] || 50,
+        tokenBalance: tokensMap[plan] || 100,
         ...(stripeCustomerId && { stripeCustomerId }),
         ...(stripeSubscriptionId && { stripeSubscriptionId }),
         updatedAt: new Date(),
@@ -156,14 +156,14 @@ export class PostgresStorage implements IStorage {
     return user;
   }
 
-  async updateUserCredits(userId: string, creditsBalance: number, creditsUsed?: number): Promise<User> {
+  async updateUserTokens(userId: string, tokenBalance: number, tokensUsed?: number): Promise<User> {
     const updateData: any = { 
-      aiCreditsBalance: creditsBalance,
+      tokenBalance: tokenBalance,
       updatedAt: new Date(),
     };
     
-    if (creditsUsed !== undefined) {
-      updateData.aiCreditsUsed = creditsUsed;
+    if (tokensUsed !== undefined) {
+      updateData.tokensUsed = tokensUsed;
     }
     
     const [user] = await db.update(users)
@@ -175,18 +175,18 @@ export class PostgresStorage implements IStorage {
     return user;
   }
 
-  async deductCredits(userId: string, amount: number): Promise<User> {
+  async deductTokens(userId: string, amount: number): Promise<User> {
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
     
-    if (user.aiCreditsBalance < amount) {
-      throw new Error("Insufficient credits");
+    if (user.tokenBalance < amount) {
+      throw new Error("Insufficient tokens");
     }
     
     const [updatedUser] = await db.update(users)
       .set({
-        aiCreditsBalance: user.aiCreditsBalance - amount,
-        aiCreditsUsed: user.aiCreditsUsed + amount,
+        tokenBalance: user.tokenBalance - amount,
+        tokensUsed: user.tokensUsed + amount,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
@@ -195,30 +195,30 @@ export class PostgresStorage implements IStorage {
     return updatedUser;
   }
 
-  async refreshMonthlyCredits(userId: string): Promise<User> {
+  async refreshMonthlyTokens(userId: string): Promise<User> {
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
     
-    // Calculate carryover (unused credits from this month)
-    const unusedCredits = user.aiCreditsBalance;
-    const maxCarryover = user.plan === "pro" ? 10000 : user.plan === "team" ? 50000 : 0;
-    const newCarryover = Math.min(unusedCredits, maxCarryover);
+    // Calculate carryover (unused tokens from this month)
+    const unusedTokens = user.tokenBalance;
+    const maxCarryover = user.plan === "pro" ? 600 : user.plan === "team" ? 2000 : 0;
+    const newCarryover = Math.min(unusedTokens, maxCarryover);
     
-    // Refresh credits based on plan
-    const monthlyCredits: Record<string, number> = {
-      free: 50,
-      pro: 5000,
-      team: 25000,
+    // Refresh tokens based on plan
+    const monthlyTokens: Record<string, number> = {
+      free: 100,
+      pro: 300,
+      team: 1000,
     };
     
-    const baseCredits = monthlyCredits[user.plan] || 50;
+    const baseTokens = monthlyTokens[user.plan] || 100;
     
     const [updatedUser] = await db.update(users)
       .set({
-        aiCreditsBalance: baseCredits + newCarryover,
-        creditCarryover: newCarryover,
-        aiCreditsUsed: 0,
-        lastCreditRefresh: new Date(),
+        tokenBalance: baseTokens + newCarryover,
+        tokenCarryover: newCarryover,
+        tokensUsed: 0,
+        lastTokenRefresh: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))

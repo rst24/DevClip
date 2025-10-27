@@ -14,7 +14,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Users with Replit Auth + enhanced credit system
+// Users with Replit Auth + enhanced token system
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -23,11 +23,11 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   plan: text("plan").notNull().default("free"), // free, pro, team
   
-  // Enhanced credit system
-  aiCreditsBalance: integer("ai_credits_balance").notNull().default(50), // Current available credits
-  aiCreditsUsed: integer("ai_credits_used").notNull().default(0), // Total credits used this period
-  creditCarryover: integer("credit_carryover").notNull().default(0), // Carried over from previous month
-  lastCreditRefresh: timestamp("last_credit_refresh").defaultNow(), // Last monthly refresh
+  // Enhanced token system
+  tokenBalance: integer("token_balance").notNull().default(100), // Current available tokens (updated from 50)
+  tokensUsed: integer("tokens_used").notNull().default(0), // Total tokens used this period
+  tokenCarryover: integer("token_carryover").notNull().default(0), // Carried over from previous month
+  lastTokenRefresh: timestamp("last_token_refresh").defaultNow(), // Last monthly refresh
   
   // Stripe integration
   stripeCustomerId: text("stripe_customer_id"),
@@ -73,7 +73,7 @@ export const insertClipboardItemSchema = createInsertSchema(clipboardItems).omit
 export type InsertClipboardItem = z.infer<typeof insertClipboardItemSchema>;
 export type ClipboardItem = typeof clipboardItems.$inferSelect;
 
-// AI operation requests for tracking usage with credit costs
+// AI operation requests for tracking usage with token costs
 export const aiOperations = pgTable(
   "ai_operations",
   {
@@ -82,8 +82,8 @@ export const aiOperations = pgTable(
     operationType: text("operation_type").notNull(), // explain, refactor, summarize
     inputText: text("input_text").notNull(),
     outputText: text("output_text").notNull(),
-    tokensUsed: integer("tokens_used").notNull(),
-    creditsUsed: integer("credits_used").notNull().default(1), // 1-3 credits per operation
+    apiTokensUsed: integer("api_tokens_used").notNull(), // OpenAI API tokens consumed
+    tokensCharged: integer("tokens_charged").notNull().default(1), // DevClip tokens deducted (1-3 per operation)
     estimatedCost: integer("estimated_cost"), // Cost in cents ($0.002-$0.006 per operation)
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

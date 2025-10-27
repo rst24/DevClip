@@ -37,7 +37,7 @@ export function UpgradeBanner({ onUpgradeClick, userPlan }: UpgradeBannerProps) 
         <div className="flex items-center gap-3 flex-1">
           <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
           <AlertDescription className="text-sm">
-            <strong className="font-semibold">Upgrade to Pro</strong> for 5,000 AI credits/month,
+            <strong className="font-semibold">Upgrade to Pro</strong> for 300 AI tokens/month,
             6 API keys, and priority support. Only <strong>$4.99/month</strong>.
           </AlertDescription>
         </div>

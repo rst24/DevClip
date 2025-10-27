@@ -1,7 +1,7 @@
 # DevClip - Developer Clipboard Manager
 
 ## Overview
-DevClip is a developer-focused clipboard management tool offering local text formatting and AI-powered features. It aims to streamline developer workflows by providing efficient clipboard management, code manipulation, and intelligent insights. The project integrates a React frontend, Node.js/Express backend, and leverages a tiered AI model approach (GPT-5 Nano for Free, GPT-5 Mini for Pro, GPT-5 for Team) to cater to various user needs, from individual developers to teams. Pricing: Free (50 AI credits/month), Pro ($4.99/month, 5,000 credits, 6 API keys), Team ($24.99/month, 25,000 credits, unlimited keys). Its core purpose is to enhance productivity through advanced clipboard functionalities and AI assistance.
+DevClip is a developer-focused clipboard management tool offering local text formatting and AI-powered features. It aims to streamline developer workflows by providing efficient clipboard management, code manipulation, and intelligent insights. The project integrates a React frontend, Node.js/Express backend, and leverages a tiered AI model approach (GPT-5 Nano for Free, GPT-5 Mini for Pro, GPT-5 for Team) to cater to various user needs, from individual developers to teams. Pricing: Free (100 AI tokens/month), Pro ($4.99/month, 300 tokens, 6 API keys), Team ($24.99/month, 1,000 tokens, unlimited keys). Its core purpose is to enhance productivity through advanced clipboard functionalities and AI assistance.
 
 ## User Preferences
 I prefer clear and concise explanations. When making changes, please adopt an iterative development approach, explaining each step. Before implementing any major architectural shifts or significant code refactoring, I expect to be consulted. Please do not make changes to the `extension/` folder without explicit instruction, as this contains the browser extension which has its own deployment cycle. I also prefer detailed explanations for complex features or architectural decisions.
@@ -17,11 +17,11 @@ DevClip is built with a React 18, TypeScript, Vite, Tailwind CSS, and shadcn/ui 
 
 **Technical Implementations:**
 - **Authentication**: Replit Auth SSO for user login (Google, GitHub, Apple, X).
-- **Database Schema**: Key tables include `users`, `sessions`, `clipboard_items`, `ai_operations`, `feedback`, `api_keys`, and `error_logs`.
-- **Subscription Management**: Tiered plans (Free: 50 credits/mo, Pro: $4.99/mo with 5,000 credits + 6 API keys, Team: $24.99/mo with 25,000 credits + unlimited keys).
+- **Database Schema**: Key tables include `users`, `sessions`, `clipboard_items`, `ai_operations`, `feedback`, `api_keys`, and `error_logs`. User token tracking uses `tokenBalance`, `tokensUsed`, and `tokenCarryover` columns (migrated from credit-based terminology October 2025).
+- **Subscription Management**: Tiered plans (Free: 100 tokens/mo, Pro: $4.99/mo with 300 tokens + 6 API keys, Team: $24.99/mo with 1,000 tokens + unlimited keys).
 - **Stripe Integration**: Handles subscription lifecycle via webhooks (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`).
 - **API Key System**: Crypto-based API key generation, Bearer token authentication for `v1` endpoints, soft-delete revocation, and UI for management.
-- **Credit System**: Pre-flight credit checks for AI and formatter operations, atomic deduction, and 402 responses on depletion.
+- **Token System**: Pre-flight token checks for AI and formatter operations, atomic deduction, and 402 responses on depletion. Token allocations: Free (100/mo), Pro (300/mo with carryover up to 600), Team (1,000/mo with carryover up to 2,000).
 - **Error Tracking**: `error_logs` table with sensitive data redaction and error middleware.
 - **Performance**: Frontend lazy loading with `React.lazy()` and `Suspense` for heavy components; database indexing for `clipboard_items`, `ai_operations`, etc.
 - **Tiered AI Models**: Backend dynamically selects OpenAI models (GPT-5 Nano/Mini/Premium) based on user's subscription tier.

@@ -170,51 +170,51 @@ export default function Dashboard() {
       const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] });
       
       if (updatedUser) {
-        const creditsUsed = (updatedUser as any).aiCreditsUsed || 0;
-        const creditLimit = 
-          (updatedUser as any).plan === "pro" ? 5000 
-          : (updatedUser as any).plan === "team" ? 25000 
-          : 50;
-        const creditsRemaining = creditLimit - creditsUsed;
-        const usagePercent = (creditsUsed / creditLimit) * 100;
+        const tokensUsed = (updatedUser as any).tokensUsed || 0;
+        const tokenLimit = 
+          (updatedUser as any).plan === "pro" ? 300 
+          : (updatedUser as any).plan === "team" ? 1000 
+          : 100;
+        const tokensRemaining = tokenLimit - tokensUsed;
+        const usagePercent = (tokensUsed / tokenLimit) * 100;
 
-        // Check if credits were replenished or plan upgraded
-        const lastCreditsUsed = parseInt(sessionStorage.getItem("last-credits-used") || "0");
-        const lastCreditLimit = parseInt(sessionStorage.getItem("last-credit-limit") || "0");
+        // Check if tokens were replenished or plan upgraded
+        const lastTokensUsed = parseInt(sessionStorage.getItem("last-tokens-used") || "0");
+        const lastTokenLimit = parseInt(sessionStorage.getItem("last-token-limit") || "0");
         
-        if (creditsUsed < lastCreditsUsed || creditLimit > lastCreditLimit) {
-          // Clear all warning flags when credits decrease (replenishment) or plan upgrades
-          sessionStorage.removeItem("credit-warning-80-8");
-          sessionStorage.removeItem("credit-warning-80-9");
-          sessionStorage.removeItem("credit-depleted");
+        if (tokensUsed < lastTokensUsed || tokenLimit > lastTokenLimit) {
+          // Clear all warning flags when tokens decrease (replenishment) or plan upgrades
+          sessionStorage.removeItem("token-warning-80-8");
+          sessionStorage.removeItem("token-warning-80-9");
+          sessionStorage.removeItem("token-depleted");
         }
         
-        sessionStorage.setItem("last-credits-used", creditsUsed.toString());
-        sessionStorage.setItem("last-credit-limit", creditLimit.toString());
+        sessionStorage.setItem("last-tokens-used", tokensUsed.toString());
+        sessionStorage.setItem("last-token-limit", tokenLimit.toString());
 
         // Show warning at 80% usage (once per bucket per cycle)
-        const warningKey = `credit-warning-80-${Math.floor(usagePercent / 10)}`;
+        const warningKey = `token-warning-80-${Math.floor(usagePercent / 10)}`;
         const hasShownWarning = sessionStorage.getItem(warningKey);
         
         if (usagePercent >= 80 && usagePercent < 100 && !hasShownWarning) {
           sessionStorage.setItem(warningKey, "true");
           toast({
-            title: "Low on AI credits",
-            description: `You have ${creditsRemaining} of ${creditLimit} credits remaining this month. Consider upgrading for more credits.`,
+            title: "Low on AI tokens",
+            description: `You have ${tokensRemaining} of ${tokenLimit} tokens remaining this month. Consider upgrading for more tokens.`,
             variant: "default",
           });
         }
 
         // Show critical warning when depleted
-        if (creditsRemaining <= 0) {
-          const depletedKey = "credit-depleted";
+        if (tokensRemaining <= 0) {
+          const depletedKey = "token-depleted";
           const hasShownDepleted = sessionStorage.getItem(depletedKey);
           
           if (!hasShownDepleted) {
             sessionStorage.setItem(depletedKey, "true");
             toast({
-              title: "AI credits depleted",
-              description: "Upgrade to Pro for 5,000 AI credits/month or wait until next month for your credits to reset.",
+              title: "AI tokens depleted",
+              description: "Upgrade to Pro for 300 AI tokens/month or wait until next month for your tokens to reset.",
               variant: "destructive",
               action: (
                 <Button
@@ -402,7 +402,7 @@ export default function Dashboard() {
               <>
                 <PlanBadge plan={(user as any).plan as "free" | "pro" | "team"} />
                 <CreditBalanceWidget
-                  balance={(user as any).aiCreditsBalance || 0}
+                  balance={(user as any).tokenBalance || 0}
                   plan={(user as any).plan as "free" | "pro" | "team"}
                 />
               </>
@@ -456,7 +456,7 @@ export default function Dashboard() {
                   lastName: (user as any).lastName,
                   profileImageUrl: (user as any).profileImageUrl,
                   plan: (user as any).plan as "free" | "pro" | "team",
-                  aiCreditsBalance: (user as any).aiCreditsBalance,
+                  tokenBalance: (user as any).tokenBalance,
                 }}
                 onNavigate={(tab) => {
                   setActiveTab(tab);
@@ -685,7 +685,7 @@ export default function Dashboard() {
                   <AiActionsPanel
                     onAiAction={handleAiAction}
                     plan={(user as any).plan as "free" | "pro" | "team"}
-                    credits={(user as any).aiCreditsBalance ?? 50}
+                    tokens={(user as any).tokenBalance ?? 100}
                     onUpgrade={() => setUpgradeModalOpen(true)}
                   />
                 </div>
@@ -706,9 +706,9 @@ export default function Dashboard() {
                     user={{
                       email: (user as any).email,
                       plan: (user as any).plan as "free" | "pro" | "team",
-                      aiCreditsBalance: (user as any).aiCreditsBalance ?? 50,
-                      aiCreditsUsed: (user as any).aiCreditsUsed,
-                      creditCarryover: (user as any).creditCarryover,
+                      tokenBalance: (user as any).tokenBalance ?? 100,
+                      tokensUsed: (user as any).tokensUsed,
+                      tokenCarryover: (user as any).tokenCarryover,
                       firstName: (user as any).firstName,
                       lastName: (user as any).lastName,
                     }}

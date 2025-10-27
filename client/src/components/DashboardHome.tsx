@@ -42,18 +42,18 @@ interface DashboardHomeProps {
 interface AnalyticsData {
   summary: {
     totalOperations: number;
-    totalCreditsUsed: number;
-    averageCreditsPerOperation: string;
+    totalTokensUsed: number;
+    averageTokensPerOperation: string;
   };
   dailyTimeSeries: Array<{
     date: string;
     operations: number;
-    credits: number;
+    tokens: number;
   }>;
   recentOperations: Array<{
     id: string;
     operationType: string;
-    creditsUsed: number;
+    tokensCharged: number;
     createdAt: string;
   }>;
 }
@@ -73,10 +73,10 @@ export function DashboardHome({
 
   const recentItems = clipboardItems.slice(0, 5);
   const plan = (user as any).plan as "free" | "pro" | "team";
-  const creditsUsed = (user as any).aiCreditsUsed || 0;
-  const creditsTotal = plan === "pro" ? 5000 : plan === "team" ? 25000 : 50;
-  const creditsRemaining = creditsTotal - creditsUsed;
-  const usagePercent = (creditsUsed / creditsTotal) * 100;
+  const tokensUsed = (user as any).tokensUsed || 0;
+  const tokensTotal = plan === "pro" ? 300 : plan === "team" ? 1000 : 100;
+  const tokensRemaining = tokensTotal - tokensUsed;
+  const usagePercent = (tokensUsed / tokensTotal) * 100;
 
   const toggleItemExpanded = (id: string) => {
     const newExpanded = new Set(expandedItems);
@@ -116,18 +116,18 @@ export function DashboardHome({
 
       {/* Quick Stats */}
       <div className="grid md:grid-cols-3 gap-4">
-        {/* Credits Overview */}
-        <Card data-testid="card-credits-overview">
+        {/* Tokens Overview */}
+        <Card data-testid="card-tokens-overview">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Credits</CardTitle>
+            <CardTitle className="text-sm font-medium">AI Tokens</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-credits-remaining">
-              {creditsRemaining.toLocaleString()}
+            <div className="text-2xl font-bold" data-testid="text-tokens-remaining">
+              {tokensRemaining.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mb-2">
-              of {creditsTotal.toLocaleString()} remaining this month
+              of {tokensTotal.toLocaleString()} remaining this month
             </p>
             <div className="w-full bg-secondary rounded-full h-2">
               <div
@@ -138,7 +138,7 @@ export function DashboardHome({
                   "bg-primary"
                 )}
                 style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                data-testid="progress-credits-usage"
+                data-testid="progress-tokens-usage"
               />
             </div>
           </CardContent>
@@ -204,7 +204,7 @@ export function DashboardHome({
         <Card data-testid="card-usage-trend">
           <CardHeader>
             <CardTitle className="text-base">Usage Trend (Last 30 Days)</CardTitle>
-            <CardDescription>Daily AI operations and credits consumed</CardDescription>
+            <CardDescription>Daily AI operations and tokens consumed</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
@@ -235,11 +235,11 @@ export function DashboardHome({
                 />
                 <Line
                   type="monotone"
-                  dataKey="credits"
+                  dataKey="tokens"
                   stroke="hsl(var(--chart-2))"
                   strokeWidth={2}
                   dot={{ r: 3 }}
-                  name="Credits"
+                  name="Tokens"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -276,7 +276,7 @@ export function DashboardHome({
             <Sparkles className="h-4 w-4 mr-2" />
             <div className="text-left flex-1">
               <div className="font-medium">AI Tools</div>
-              <div className="text-xs text-muted-foreground">{creditsRemaining} credits left</div>
+              <div className="text-xs text-muted-foreground">{tokensRemaining} tokens left</div>
             </div>
           </Button>
 

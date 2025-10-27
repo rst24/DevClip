@@ -31,9 +31,9 @@ interface User {
   firstName: string | null;
   lastName: string | null;
   plan: string;
-  aiCreditsBalance: number;
-  aiCreditsUsed: number;
-  creditCarryover: number;
+  tokenBalance: number;
+  tokensUsed: number;
+  tokenCarryover: number;
   isAdmin: boolean;
   stripeCustomerId: string | null;
   createdAt: string;
@@ -46,7 +46,7 @@ interface Stats {
     pro: number;
     team: number;
   };
-  credits: {
+  tokens: {
     total: number;
     used: number;
     remaining: number;
@@ -69,21 +69,21 @@ export default function Admin() {
     queryKey: ["/api/admin/users"],
   });
 
-  // Update credits mutation
+  // Update tokens mutation
   const updateCreditsMutation = useMutation({
     mutationFn: async ({ userId, credits }: { userId: string; credits: number }) => {
       return await apiRequest(
         `/api/admin/users/${userId}/credits`,
         "PATCH",
-        { aiCreditsBalance: credits }
+        { tokenBalance: credits }
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
-        title: "Credits updated",
-        description: "User credits have been updated successfully",
+        title: "Tokens updated",
+        description: "User tokens have been updated successfully",
       });
       setEditingUser(null);
       setNewCredits("");
@@ -91,7 +91,7 @@ export default function Admin() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update credits",
+        description: error.message || "Failed to update tokens",
         variant: "destructive",
       });
     },
@@ -158,7 +158,7 @@ export default function Admin() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-admin-title">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage users, credits, and platform statistics</p>
+          <p className="text-muted-foreground">Manage users, tokens, and platform statistics</p>
         </div>
         <Badge variant="secondary" className="gap-2">
           <Shield className="h-4 w-4" />
@@ -187,9 +187,9 @@ export default function Admin() {
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Credits</p>
-                <p className="text-2xl font-bold" data-testid="stat-total-credits">
-                  {stats.credits.total.toLocaleString()}
+                <p className="text-sm text-muted-foreground">Total Tokens</p>
+                <p className="text-2xl font-bold" data-testid="stat-total-tokens">
+                  {stats.tokens.total.toLocaleString()}
                 </p>
               </div>
               <CreditCard className="h-8 w-8 text-muted-foreground" />
@@ -199,9 +199,9 @@ export default function Admin() {
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Credits Used</p>
-                <p className="text-2xl font-bold" data-testid="stat-credits-used">
-                  {stats.credits.used.toLocaleString()}
+                <p className="text-sm text-muted-foreground">Tokens Used</p>
+                <p className="text-2xl font-bold" data-testid="stat-tokens-used">
+                  {stats.tokens.used.toLocaleString()}
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-muted-foreground" />
@@ -212,8 +212,8 @@ export default function Admin() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Remaining</p>
-                <p className="text-2xl font-bold" data-testid="stat-credits-remaining">
-                  {stats.credits.remaining.toLocaleString()}
+                <p className="text-2xl font-bold" data-testid="stat-tokens-remaining">
+                  {stats.tokens.remaining.toLocaleString()}
                 </p>
               </div>
               <CreditCard className="h-8 w-8 text-muted-foreground" />
@@ -279,8 +279,8 @@ export default function Admin() {
                           {user.plan.toUpperCase()}
                         </Badge>
                       </TableCell>
-                      <TableCell>{user.aiCreditsBalance.toLocaleString()}</TableCell>
-                      <TableCell>{user.aiCreditsUsed.toLocaleString()}</TableCell>
+                      <TableCell>{user.tokenBalance.toLocaleString()}</TableCell>
+                      <TableCell>{user.tokensUsed.toLocaleString()}</TableCell>
                       <TableCell>
                         {user.isAdmin && (
                           <Badge variant="secondary">
@@ -296,11 +296,11 @@ export default function Admin() {
                             variant="outline"
                             onClick={() => {
                               setEditingUser(user);
-                              setNewCredits(user.aiCreditsBalance.toString());
+                              setNewCredits(user.tokenBalance.toString());
                             }}
                             data-testid={`button-edit-credits-${user.id}`}
                           >
-                            Edit Credits
+                            Edit Tokens
                           </Button>
                           <Button
                             size="sm"
@@ -330,26 +330,26 @@ export default function Admin() {
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <DialogContent data-testid="dialog-edit-credits">
           <DialogHeader>
-            <DialogTitle>Edit User Credits</DialogTitle>
+            <DialogTitle>Edit User Tokens</DialogTitle>
             <DialogDescription>
-              Update credits for {editingUser?.email}
+              Update tokens for {editingUser?.email}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="credits">AI Credits Balance</Label>
+              <Label htmlFor="credits">AI Tokens Balance</Label>
               <Input
                 id="credits"
                 type="number"
                 min="0"
                 value={newCredits}
                 onChange={(e) => setNewCredits(e.target.value)}
-                placeholder="Enter credits amount"
+                placeholder="Enter tokens amount"
                 data-testid="input-new-credits"
               />
             </div>
             <div className="text-sm text-muted-foreground">
-              Current: {editingUser?.aiCreditsBalance.toLocaleString()} credits
+              Current: {editingUser?.tokenBalance.toLocaleString()} tokens
             </div>
           </div>
           <DialogFooter>
@@ -361,7 +361,7 @@ export default function Admin() {
               disabled={updateCreditsMutation.isPending}
               data-testid="button-save-credits"
             >
-              {updateCreditsMutation.isPending ? "Updating..." : "Update Credits"}
+              {updateCreditsMutation.isPending ? "Updating..." : "Update Tokens"}
             </Button>
           </DialogFooter>
         </DialogContent>
