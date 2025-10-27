@@ -54,56 +54,67 @@ export default function Landing() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <Badge variant="secondary" className="text-sm">
-                  <Download className="h-3 w-3 mr-1" />
-                  Now Available for Chrome & Edge
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  AI-Powered Developer Tools
                 </Badge>
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-                  Format Code in
+                  Format, Explain, Refactor in
                   <span className="text-primary"> One Click</span>
                 </h1>
                 <p className="text-xl text-muted-foreground">
-                  Browser extension with local JSON, YAML, SQL formatters + AI-powered code tools. 
-                  Format instantly, explain code, refactor with GPT-5 (Nano/Mini/Premium).
+                  Smart clipboard manager with 13-language formatter and GPT-5 AI tools. 
+                  Format code instantly (offline), explain complex logic, refactor with AI—all from your browser.
                 </p>
               </div>
 
               <div className="flex flex-col gap-4">
-                <Button 
-                  size="lg" 
-                  onClick={handleScrollToExtension}
-                  className="text-lg px-8 w-full sm:w-auto"
-                  data-testid="button-get-extension"
-                >
-                  <Chrome className="mr-2 h-5 w-5" />
-                  Get Extension
-                </Button>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button 
                     size="lg" 
-                    variant="outline" 
                     onClick={handleTryFormatters}
-                    className="flex-1"
-                    data-testid="button-try-web"
+                    className="text-lg px-8 flex-1"
+                    data-testid="button-start-free"
                   >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Or Try Web Version
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Start Free
                   </Button>
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    onClick={handleViewDocs}
-                    className="flex-1"
-                    data-testid="button-view-docs"
+                    onClick={handleScrollToExtension}
+                    className="text-lg px-8 flex-1"
+                    data-testid="button-get-extension"
                   >
-                    <Code className="mr-2 h-4 w-4" />
-                    API Docs
+                    <Download className="mr-2 h-5 w-5" />
+                    Get Extension
                   </Button>
                 </div>
+                <Button 
+                  size="lg" 
+                  variant="ghost" 
+                  onClick={handleViewDocs}
+                  className="w-full"
+                  data-testid="button-view-docs"
+                >
+                  <Code className="mr-2 h-4 w-4" />
+                  View API Documentation
+                </Button>
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Free local formatters • 50 AI credits/month • Pro: 5,000 credits + API access
-              </p>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Wand2 className="h-4 w-4" />
+                  <span>13 languages</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Lock className="h-4 w-4" />
+                  <span>Works offline</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Zap className="h-4 w-4" />
+                  <span>No signup required</span>
+                </div>
+              </div>
             </div>
 
             <div className="relative">
