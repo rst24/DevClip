@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 interface UpgradeBannerProps {
   onUpgradeClick: () => void;
@@ -10,6 +11,20 @@ interface UpgradeBannerProps {
 
 export function UpgradeBanner({ onUpgradeClick, userPlan }: UpgradeBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [tracked, setTracked] = useState(false);
+
+  // Track banner shown event (only once per mount)
+  useEffect(() => {
+    if (userPlan === "free" && !dismissed && !tracked) {
+      trackEvent('upgrade_banner_shown');
+      setTracked(true);
+    }
+  }, [userPlan, dismissed, tracked]);
+
+  const handleUpgradeClick = () => {
+    trackEvent('upgrade_banner_clicked');
+    onUpgradeClick();
+  };
 
   // Only show for free users
   if (userPlan !== "free" || dismissed) {
@@ -30,7 +45,7 @@ export function UpgradeBanner({ onUpgradeClick, userPlan }: UpgradeBannerProps) 
           <Button
             size="sm"
             variant="default"
-            onClick={onUpgradeClick}
+            onClick={handleUpgradeClick}
             data-testid="button-upgrade-banner"
           >
             Upgrade Now

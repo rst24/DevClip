@@ -2,6 +2,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 interface CreditWarningBannerProps {
   creditsUsed: number;
@@ -15,6 +16,7 @@ export function CreditWarningBanner({
   onUpgradeClick,
 }: CreditWarningBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [tracked, setTracked] = useState(false);
 
   const usagePercent = (creditsUsed / creditsTotal) * 100;
   const creditsRemaining = creditsTotal - creditsUsed;
@@ -25,11 +27,34 @@ export function CreditWarningBanner({
     if (isDepleted) {
       // Always show critical depletion warning even if previously dismissed
       setDismissed(false);
+      setTracked(false); // Re-track when severity escalates
     } else if (usagePercent < 80) {
       // Reset when credits drop below warning threshold
       setDismissed(false);
+      setTracked(false);
     }
   }, [isDepleted, usagePercent]);
+
+  // Track warning shown event
+  useEffect(() => {
+    const shouldShow = usagePercent >= 80 || creditsRemaining <= 0;
+    if (shouldShow && !dismissed && !tracked) {
+      trackEvent('credit_warning_shown', {
+        isDepleted,
+        usagePercent: Math.round(usagePercent),
+        creditsRemaining,
+      });
+      setTracked(true);
+    }
+  }, [usagePercent, creditsRemaining, isDepleted, dismissed, tracked]);
+
+  const handleUpgradeClick = () => {
+    trackEvent('credit_warning_clicked', {
+      isDepleted,
+      usagePercent: Math.round(usagePercent),
+    });
+    onUpgradeClick();
+  };
 
   // Show warning at 80% usage or when depleted
   const shouldShow = usagePercent >= 80 || creditsRemaining <= 0;
@@ -66,7 +91,7 @@ export function CreditWarningBanner({
           <Button
             size="sm"
             variant={isDepleted ? "destructive" : "default"}
-            onClick={onUpgradeClick}
+            onClick={handleUpgradeClick}
             data-testid="button-upgrade-credits"
           >
             {isDepleted ? "Upgrade Now" : "Get More Credits"}

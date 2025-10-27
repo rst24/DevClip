@@ -667,6 +667,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track conversion events (analytics)
+  app.post("/api/analytics/track", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { eventType, metadata } = req.body;
+      
+      if (!eventType || typeof eventType !== 'string') {
+        return res.status(400).json({ message: "Invalid event type" });
+      }
+      
+      await storage.logConversionEvent(userId, eventType, metadata);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error tracking event:", error);
+      res.status(500).json({ message: "Failed to track event" });
+    }
+  });
+
   // ========== ADMIN ROUTES (for admin panel) ==========
   
   // Get all users (admin only)

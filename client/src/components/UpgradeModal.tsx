@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Users, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -76,6 +77,21 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
+
+  // Track modal shown event
+  useEffect(() => {
+    if (open) {
+      trackEvent('upgrade_modal_shown');
+    }
+  }, [open]);
+
+  const handleSelectPlan = (plan: "pro" | "team") => {
+    trackEvent('upgrade_modal_plan_selected', {
+      plan,
+      billingInterval,
+    });
+    onSelectPlan(plan, billingInterval);
+  };
 
   const getPrice = (plan: (typeof plans)[0]) => {
     return billingInterval === "month" ? plan.monthlyPrice : plan.annualPrice;
@@ -224,9 +240,7 @@ export function UpgradeModal({
                 <Button
                   variant={plan.popular ? "default" : "outline"}
                   className="w-full"
-                  onClick={() =>
-                    onSelectPlan(plan.id as "pro" | "team", billingInterval)
-                  }
+                  onClick={() => handleSelectPlan(plan.id as "pro" | "team")}
                   data-testid={`button-plan-${plan.id}`}
                 >
                   Upgrade to {plan.name}
