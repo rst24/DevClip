@@ -9,6 +9,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlanBadge } from "@/components/PlanBadge";
 import { ClipboardCard } from "@/components/ClipboardCard";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { CreditWarningBanner } from "@/components/CreditWarningBanner";
 
 // Lazy load heavy components for code splitting
 const FormattersPanel = lazy(() => import("@/components/FormattersPanel").then(m => ({ default: m.FormattersPanel })));
@@ -148,8 +150,73 @@ export default function Dashboard() {
       const data = await res.json();
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async (data, variables) => {
+      // Invalidate and refetch user data to get updated credits
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Wait for fresh user data
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] });
+      
+      if (updatedUser) {
+        const creditsUsed = (updatedUser as any).aiCreditsUsed || 0;
+        const creditLimit = 
+          (updatedUser as any).plan === "pro" ? 5000 
+          : (updatedUser as any).plan === "team" ? 25000 
+          : 50;
+        const creditsRemaining = creditLimit - creditsUsed;
+        const usagePercent = (creditsUsed / creditLimit) * 100;
+
+        // Check if credits were replenished or plan upgraded
+        const lastCreditsUsed = parseInt(sessionStorage.getItem("last-credits-used") || "0");
+        const lastCreditLimit = parseInt(sessionStorage.getItem("last-credit-limit") || "0");
+        
+        if (creditsUsed < lastCreditsUsed - 10 || creditLimit > lastCreditLimit) {
+          // Clear all warning flags when credits are replenished or plan upgraded
+          sessionStorage.removeItem("credit-warning-80-8");
+          sessionStorage.removeItem("credit-warning-80-9");
+          sessionStorage.removeItem("credit-depleted");
+        }
+        
+        sessionStorage.setItem("last-credits-used", creditsUsed.toString());
+        sessionStorage.setItem("last-credit-limit", creditLimit.toString());
+
+        // Show warning at 80% usage (once per bucket per cycle)
+        const warningKey = `credit-warning-80-${Math.floor(usagePercent / 10)}`;
+        const hasShownWarning = sessionStorage.getItem(warningKey);
+        
+        if (usagePercent >= 80 && usagePercent < 100 && !hasShownWarning) {
+          sessionStorage.setItem(warningKey, "true");
+          toast({
+            title: "Low on AI credits",
+            description: `You have ${creditsRemaining} of ${creditLimit} credits remaining this month. Consider upgrading for more credits.`,
+            variant: "default",
+          });
+        }
+
+        // Show critical warning when depleted
+        if (creditsRemaining <= 0) {
+          const depletedKey = "credit-depleted";
+          const hasShownDepleted = sessionStorage.getItem(depletedKey);
+          
+          if (!hasShownDepleted) {
+            sessionStorage.setItem(depletedKey, "true");
+            toast({
+              title: "AI credits depleted",
+              description: "Upgrade to Pro for 5,000 AI credits/month or wait until next month for your credits to reset.",
+              variant: "destructive",
+              action: (
+                <Button
+                  size="sm"
+                  onClick={() => setUpgradeModalOpen(true)}
+                  data-testid="button-upgrade-toast"
+                >
+                  Upgrade
+                </Button>
+              ),
+            });
+          }
+        }
+      }
     },
   });
 
@@ -414,6 +481,27 @@ export default function Dashboard() {
               </>
             )}
           </TabsList>
+
+          {/* Upgrade Banners */}
+          {isAuthenticated && user && (
+            <div className="space-y-3">
+              <UpgradeBanner
+                onUpgradeClick={() => setUpgradeModalOpen(true)}
+                userPlan={(user as any).plan as "free" | "pro" | "team"}
+              />
+              <CreditWarningBanner
+                creditsUsed={(user as any).aiCreditsUsed || 0}
+                creditsTotal={
+                  (user as any).plan === "pro"
+                    ? 5000
+                    : (user as any).plan === "team"
+                    ? 25000
+                    : 50
+                }
+                onUpgradeClick={() => setUpgradeModalOpen(true)}
+              />
+            </div>
+          )}
 
           {/* Clipboard History */}
           <TabsContent value="history" className="space-y-4">

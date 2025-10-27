@@ -526,6 +526,33 @@ export default function Landing() {
               </table>
             </CardContent>
           </Card>
+
+          {/* Post-Comparison CTA */}
+          <div className="max-w-2xl mx-auto text-center space-y-4 mt-12">
+            <h3 className="text-2xl font-bold">Ready to boost your productivity?</h3>
+            <p className="text-muted-foreground">
+              Start with the free plan—no credit card required. Upgrade anytime for more AI credits and features.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Button 
+                size="lg"
+                onClick={handleSignIn}
+                data-testid="button-post-comparison-signup"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Start Free
+              </Button>
+              <Button 
+                size="lg"
+                variant="outline"
+                onClick={handleScrollToExtension}
+                data-testid="button-post-comparison-extension"
+              >
+                <Chrome className="mr-2 h-4 w-4" />
+                Get Extension
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
