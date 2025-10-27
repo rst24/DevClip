@@ -76,13 +76,13 @@ export function CreditWarningBanner({
           <AlertDescription className="text-sm">
             {isDepleted ? (
               <>
-                <strong className="font-semibold">AI credits depleted!</strong> You've used all {creditsTotal} credits
-                this month. Upgrade to Pro for 5,000 credits/month.
+                <strong className="font-semibold">AI tokens depleted!</strong> You've used all {creditsTotal} tokens
+                this month. Upgrade to Pro for 300 tokens/month.
               </>
             ) : (
               <>
-                <strong className="font-semibold">Low on credits!</strong> You have {creditsRemaining} of {creditsTotal} AI
-                credits remaining this month ({Math.round(100 - usagePercent)}% left).
+                <strong className="font-semibold">Low on tokens!</strong> You have {creditsRemaining} of {creditsTotal} AI
+                tokens remaining this month ({Math.round(100 - usagePercent)}% left).
               </>
             )}
           </AlertDescription>
@@ -94,7 +94,7 @@ export function CreditWarningBanner({
             onClick={handleUpgradeClick}
             data-testid="button-upgrade-credits"
           >
-            {isDepleted ? "Upgrade Now" : "Get More Credits"}
+            {isDepleted ? "Upgrade Now" : "Get More Tokens"}
           </Button>
           {!isDepleted && (
             <Button
