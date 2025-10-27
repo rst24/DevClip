@@ -19,7 +19,7 @@ const FormattersPanel = lazy(() => import("@/components/FormattersPanel").then(m
 const AiActionsPanel = lazy(() => import("@/components/AiActionsPanel").then(m => ({ default: m.AiActionsPanel })));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel").then(m => ({ default: m.SettingsPanel })));
 const FeedbackForm = lazy(() => import("@/components/FeedbackForm").then(m => ({ default: m.FeedbackForm })));
-const Analytics = lazy(() => import("@/components/Analytics").then(m => ({ default: m.Analytics })));
+import { DashboardHome } from "@/components/DashboardHome";
 import { 
   History, 
   Wand2, 
@@ -32,9 +32,10 @@ import {
   LogIn,
   Cloud,
   HardDrive,
-  BarChart3,
   Shield,
   Download,
+  LayoutDashboard,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,9 +49,17 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [localItems, setLocalItems] = useState<LocalClipboardItem[]>([]);
   const [activeTab, setActiveTab] = useState("history");
+  const [historyFilter, setHistoryFilter] = useState<"all" | "formatted" | "favorites">("all");
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { toast} = useToast();
+  const { user, isLoading: authLoading, isAuthenticated} = useAuth();
+
+  // Switch to dashboard tab for authenticated users on initial load
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && activeTab === "history") {
+      setActiveTab("dashboard");
+    }
+  }, [authLoading, isAuthenticated]);
 
   // Fetch clipboard history (only for authenticated users)
   const { data: clipboardItems = [], isLoading: historyLoading } = useQuery<ClipboardItem[]>({
@@ -359,10 +368,17 @@ export default function Dashboard() {
 
   // Determine which items to display and filter
   const displayItems = isAuthenticated ? clipboardItems : localItems;
-  const filteredItems = displayItems.filter(item =>
+  let filteredItems = displayItems.filter(item =>
     item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.contentType.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  // Apply history filter
+  if (historyFilter === "formatted") {
+    filteredItems = filteredItems.filter(item => item.formatted);
+  } else if (historyFilter === "favorites") {
+    filteredItems = filteredItems.filter(item => item.favorite);
+  }
 
   if (authLoading) {
     return (
@@ -482,6 +498,12 @@ export default function Dashboard() {
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-6' : 'grid-cols-2'} max-w-4xl mx-auto`}>
+            {isAuthenticated && (
+              <TabsTrigger value="dashboard" data-testid="tab-dashboard">
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Dashboard
+              </TabsTrigger>
+            )}
             <TabsTrigger value="history" data-testid="tab-history">
               <History className="h-4 w-4 mr-2" />
               History
@@ -495,10 +517,6 @@ export default function Dashboard() {
                 <TabsTrigger value="ai-tools" data-testid="tab-ai-tools">
                   <Sparkles className="h-4 w-4 mr-2" />
                   AI Tools
-                </TabsTrigger>
-                <TabsTrigger value="analytics" data-testid="tab-analytics">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Analytics
                 </TabsTrigger>
                 <TabsTrigger value="settings" data-testid="tab-settings">
                   <Settings className="h-4 w-4 mr-2" />
@@ -533,10 +551,23 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Dashboard - Authenticated only */}
+          {isAuthenticated && user && (
+            <TabsContent value="dashboard">
+              <DashboardHome
+                user={user as User}
+                onNavigateToTab={setActiveTab}
+                clipboardItems={clipboardItems}
+                onCopyToClipboard={handleCopyToClipboard}
+                onToggleFavorite={handleToggleFavorite}
+              />
+            </TabsContent>
+          )}
+
           {/* Clipboard History */}
           <TabsContent value="history" className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-md">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 max-w-md min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search clipboard history..."
@@ -545,6 +576,43 @@ export default function Dashboard() {
                   className="pl-9"
                   data-testid="input-search"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={historyFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setHistoryFilter("all")}
+                  data-testid="filter-all"
+                >
+                  All
+                </Button>
+                <Button
+                  variant={historyFilter === "formatted" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setHistoryFilter("formatted")}
+                  data-testid="filter-formatted"
+                >
+                  Formatted
+                </Button>
+                <Button
+                  variant={historyFilter === "favorites" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setHistoryFilter("favorites")}
+                  data-testid="filter-favorites"
+                >
+                  Favorites
+                </Button>
+                {isAuthenticated && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/history"] })}
+                    data-testid="button-refresh-history"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -604,19 +672,6 @@ export default function Dashboard() {
               <FormattersPanel onSaveToHistory={handleSaveFormattedToHistory} />
             </Suspense>
           </TabsContent>
-
-          {/* Analytics - Authenticated only */}
-          {isAuthenticated && (
-            <TabsContent value="analytics">
-              <Suspense fallback={
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              }>
-                <Analytics />
-              </Suspense>
-            </TabsContent>
-          )}
 
           {/* AI Tools - Authenticated only */}
           {isAuthenticated && user && (

@@ -67,6 +67,7 @@ export const clipboardItems = pgTable(
 export const insertClipboardItemSchema = createInsertSchema(clipboardItems).omit({
   id: true,
   createdAt: true,
+  userId: true,
 });
 
 export type InsertClipboardItem = z.infer<typeof insertClipboardItemSchema>;
