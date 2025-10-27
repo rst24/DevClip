@@ -1,71 +1,86 @@
-# DevClip - Developer Clipboard Manager
+# DevClip - AI Code Memory Platform
 
 ## Overview
-DevClip is a developer-focused clipboard management tool offering local text formatting and AI-powered features. It aims to streamline developer workflows by providing efficient clipboard management, code manipulation, and intelligent insights. The project integrates a React frontend, Node.js/Express backend, and leverages a tiered AI model approach (GPT-5 Nano for Free, GPT-5 Mini for Pro, GPT-5 for Team) to cater to various user needs, from individual developers to teams. Pricing: Free (100 AI tokens/month), Pro ($4.99/month, 300 tokens, 6 API keys), Team ($24.99/month, 1,000 tokens, unlimited keys). Its core purpose is to enhance productivity through advanced clipboard functionalities and AI assistance.
+DevClip is a developer clipboard manager with AI-powered semantic search, code formatting, and intelligent insights. Users save code snippets and query them with natural language (e.g., "find JWT examples") using OpenAI embeddings and PostgreSQL pgvector.
 
-## User Preferences
-I prefer clear and concise explanations. When making changes, please adopt an iterative development approach, explaining each step. Before implementing any major architectural shifts or significant code refactoring, I expect to be consulted. Please do not make changes to the `extension/` folder without explicit instruction, as this contains the browser extension which has its own deployment cycle. I also prefer detailed explanations for complex features or architectural decisions.
+**Pricing Tiers:**
+- **Free**: 100 AI tokens/month, 7-day history, local formatters
+- **Pro**: $4.99/month, 300 tokens, unlimited memory, AI search/tagging, 6 API keys
+- **Team**: $24.99/month, 1,000 tokens, shared memory, analytics, unlimited keys
 
-## System Architecture
-DevClip is built with a React 18, TypeScript, Vite, Tailwind CSS, and shadcn/ui frontend, communicating with a Node.js/Express, TypeScript backend. Data persistence is handled by PostgreSQL (Neon) via Drizzle ORM. Authentication uses bcryptjs and express-session. Stripe Checkout manages payments and subscriptions.
+## Tech Stack
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Backend**: Node.js, Express, TypeScript
+- **Database**: PostgreSQL (Neon) with pgvector extension, Drizzle ORM
+- **Auth**: Replit Auth SSO (Google, GitHub, Apple, X)
+- **Payments**: Stripe Checkout with webhook subscriptions
+- **AI**: OpenAI (GPT-5 Nano/Mini/Premium via Replit AI Integrations)
 
-**UI/UX Decisions:**
-- Modern, clean interface leveraging Tailwind CSS and shadcn/ui components.
-- Responsive design for various screen sizes.
-- Tab-based navigation for Dashboard sections (History, Formatters, Analytics, Settings, Feedback).
-- Visual cues for AI model tiers (badges) and credit usage.
+## Core Features
 
-**Technical Implementations:**
-- **Authentication**: Replit Auth SSO for user login (Google, GitHub, Apple, X).
-- **Database Schema**: Key tables include `users`, `sessions`, `clipboard_items`, `ai_operations`, `feedback`, `api_keys`, and `error_logs`. User token tracking uses `tokenBalance`, `tokensUsed`, and `tokenCarryover` columns (migrated from credit-based terminology October 2025).
-- **Subscription Management**: Tiered plans (Free: 100 tokens/mo, Pro: $4.99/mo with 300 tokens + 6 API keys, Team: $24.99/mo with 1,000 tokens + unlimited keys).
-- **Stripe Integration**: Handles subscription lifecycle via webhooks (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`).
-- **API Key System**: Crypto-based API key generation, Bearer token authentication for `v1` endpoints, soft-delete revocation, and UI for management.
-- **Token System**: Pre-flight token checks for AI and formatter operations, atomic deduction, and 402 responses on depletion. Token allocations: Free (100/mo), Pro (300/mo with carryover up to 600), Team (1,000/mo with carryover up to 2,000).
-- **Error Tracking**: `error_logs` table with sensitive data redaction and error middleware.
-- **Performance**: Frontend lazy loading with `React.lazy()` and `Suspense` for heavy components; database indexing for `clipboard_items`, `ai_operations`, etc.
-- **Tiered AI Models**: Backend dynamically selects OpenAI models (GPT-5 Nano/Mini/Premium) based on user's subscription tier.
+### 1. Universal Code Formatter
+Smart auto-detection for 13 languages using Prettier:
+- **Languages**: JavaScript, TypeScript, JSX, TSX, HTML, CSS, SCSS, Less, Vue, JSON, YAML, GraphQL, Markdown
+- **Detection Order**: Vue → TSX → JSX → JSON → TypeScript → JavaScript → HTML → GraphQL → SCSS → Less → CSS → YAML → Markdown
+- **Available**: Client-side (web app) + server API
 
-**Feature Specifications:**
-- **Universal Code Formatter** (NEW - October 2025): Smart auto-detection and formatting for 13 programming languages using Prettier:
-  - **Web Languages**: JavaScript, TypeScript (includes Angular), JSX, TSX, HTML, CSS, SCSS, Less, Vue
-  - **Data Formats**: JSON, YAML, GraphQL
-  - **Documents**: Markdown
-  - Features: Auto-detection of language from code patterns, client-side formatting (web app), server-side API support, language badge display
-  - **Detection Logic** (October 27, 2025): Critical ordering fixes applied to prevent misclassification:
-    1. Check frameworks first (Vue, TSX, JSX)
-    2. Check JSON before JavaScript (both start with `{`)
-    3. Check JavaScript before CSS (CSS pattern matches JS object literals like `{a:1}`)
-    4. Final order: Vue → TSX → JSX → JSON → TypeScript → JavaScript → HTML → GraphQL → SCSS → Less → CSS → YAML → Markdown
-- **Legacy Formatters**: JSON, YAML, SQL prettify, ANSI strip, log-to-markdown (maintained for backward compatibility).
-- **AI Operations**: Code explanation, refactoring, log summarization.
-- **Semantic Search** (NEW - October 27, 2025): AI-powered code search using OpenAI embeddings and pgvector:
-  - **Implementation Complete**: Full stack implementation with SQL pgvector queries, storage layer, API endpoints, and UI
-  - **Database**: PostgreSQL with pgvector extension, ivfflat index on embeddings column (vector(1536))
-  - **Security**: Parameterized SQL queries using `sql`` template, similarity scores normalized to 0-1 range with `GREATEST(0, LEAST(1, ...))`
-  - **Endpoints**: 
-    - `/api/memory/search` (POST) - Session-based auth for web app
-    - `/v1/memory/search` (POST) - API key auth for browser extension
-  - **Features**: Natural language search ("find JWT examples"), similarity % badges, metadata display (tags, language)
-  - **Pricing**: Pro/Team only, costs 10 tokens per search
-  - **⚠️ KNOWN LIMITATION**: Replit AI integrations do NOT support OpenAI embeddings endpoint (`POST /embeddings`). The implementation is complete and correct, but requires a real OpenAI API key (not Replit AI proxy) to function. The `generateEmbedding()` function in `server/openai.ts` will fail with "BadRequestError: 400 Endpoint not supported" until a direct OpenAI API key is configured.
-- **Analytics Dashboard**: Displays 30-day usage time series, operation breakdowns, and recent operations.
-- **Browser Extension**: Manifest V3 compliant, offering local formatters and AI tools, configurable via an options page for API keys (universal formatter pending deployment).
+### 2. Semantic Search (⚠️ Requires OpenAI API Key)
+**Status**: Implementation complete, needs real OpenAI key to function
 
-**System Design Choices:**
-- **Stateless REST API v1**: Designed for browser extension and external integrations using API key authentication.
-- **Modular Frontend**: Separation of concerns with distinct pages and components.
-- **Drizzle ORM**: Type-safe database interactions.
-- **Centralized Environment Configuration**: Utilizes environment variables for sensitive data and configurations.
+**Technical Implementation**:
+- PostgreSQL pgvector extension with ivfflat index (1536-dimensional vectors)
+- Parameterized SQL queries: `SELECT *, GREATEST(0, LEAST(1, 1 - (embedding <=> $1))) AS similarity`
+- Endpoints: `/api/memory/search` (session auth), `/v1/memory/search` (API key auth)
+- Features: Natural language search, similarity % badges, tag/language metadata
+- Pricing: Pro/Team only, 10 tokens per search
+
+**⚠️ Known Limitation**: Replit AI integrations don't support OpenAI embeddings endpoint. Need to configure `OPENAI_API_KEY` secret with real OpenAI key for embeddings to work.
+
+### 3. AI Operations
+- Code explanation, refactoring, log summarization
+- Tiered models: GPT-5 Nano (Free), GPT-5 Mini (Pro), GPT-5 (Team)
+- Token system with pre-flight checks and atomic deduction
+
+### 4. API Key System
+- Crypto-based key generation (`devclip_` prefix)
+- Bearer token auth for `/v1/*` endpoints (browser extension)
+- Soft-delete revocation with UI management
+
+### 5. Analytics Dashboard
+- 30-day usage time series (recharts visualization)
+- Operation breakdowns and recent activity
+- Token balance tracking with carryover (Pro: 600 max, Team: 2,000 max)
+
+## Database Schema
+**Key Tables**: `users`, `sessions`, `clipboard_items` (with embeddings), `ai_operations`, `feedback`, `api_keys`, `error_logs`
+
+**Important Columns**:
+- `users.plan`: 'free' | 'pro' | 'team' (NOT subscription_tier)
+- `users.tokenBalance`, `tokensUsed`, `tokenCarryover`
+- `clipboard_items.embedding`: vector(1536) with ivfflat index
+
+## Architecture Patterns
+- **REST API v1**: Stateless, API key auth for external integrations
+- **Session Auth**: Cookie-based for web app (`/api/*` endpoints)
+- **Dual Endpoints**: `/api/*` (session) + `/v1/*` (API key) for same features
+- **Error Tracking**: Centralized error logs with sensitive data redaction
+- **Performance**: React.lazy() + Suspense, database indexing
+
+## Browser Extension
+- Manifest V3 compliant
+- Local formatters + AI tools
+- Configurable API keys in options page
+- Universal formatter deployment pending
 
 ## External Dependencies
-- **Replit Auth SSO**: For user authentication.
-- **PostgreSQL (Neon)**: Database service for data persistence.
-- **Stripe**: Payment gateway for subscriptions and billing.
-- **OpenAI (via Replit AI Integrations)**: AI models (GPT-5 Nano, GPT-5 Mini, GPT-5) for AI-powered features.
-- **Prettier**: Universal code formatter for 13 programming languages (JavaScript, TypeScript/Angular, JSX, TSX, HTML, CSS, SCSS, Less, Vue, JSON, YAML, GraphQL, Markdown).
-- **`bcryptjs`**: For password hashing.
-- **`express-session` with `memorystore`**: For session management (development).
-- **`connect-pg-simple`**: For PostgreSQL-backed session store (production).
-- **`Zod`**: For schema validation.
-- **`recharts`**: For data visualization in the analytics dashboard.
+- **Replit Auth SSO**: User authentication
+- **PostgreSQL (Neon)**: Data persistence with pgvector
+- **Stripe**: Subscription billing and webhooks
+- **OpenAI**: AI models (requires real API key for embeddings)
+- **Prettier**: Code formatting engine
+
+## Development Notes
+- Database migrations: Use `npm run db:push` (add `--force` for data-loss warnings)
+- Session store: memorystore (dev), connect-pg-simple (production)
+- Do NOT modify `extension/` folder without explicit instruction
+- Column naming: Use `plan` not `subscriptionTier` in backend code
