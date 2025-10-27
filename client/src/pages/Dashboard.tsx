@@ -170,8 +170,8 @@ export default function Dashboard() {
         const lastCreditsUsed = parseInt(sessionStorage.getItem("last-credits-used") || "0");
         const lastCreditLimit = parseInt(sessionStorage.getItem("last-credit-limit") || "0");
         
-        if (creditsUsed < lastCreditsUsed - 10 || creditLimit > lastCreditLimit) {
-          // Clear all warning flags when credits are replenished or plan upgraded
+        if (creditsUsed < lastCreditsUsed || creditLimit > lastCreditLimit) {
+          // Clear all warning flags when credits decrease (replenishment) or plan upgrades
           sessionStorage.removeItem("credit-warning-80-8");
           sessionStorage.removeItem("credit-warning-80-9");
           sessionStorage.removeItem("credit-depleted");
