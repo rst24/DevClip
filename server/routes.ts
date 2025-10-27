@@ -258,8 +258,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.message === "Insufficient credits") {
         return res.status(402).json({ message: error.message });
       }
-      console.error("AI processing error:", error);
-      res.status(500).json({ message: "Failed to process AI request" });
+      console.error("AI processing error - Full details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        error: error
+      });
+      res.status(500).json({ 
+        message: "Failed to process AI request",
+        error: error.message,
+        details: error.toString()
+      });
     }
   });
 
