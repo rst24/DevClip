@@ -1,0 +1,116 @@
+# 🧠 DevClip — New Product Positioning Prompt (AI Code Memory)
+
+## 🎯 Goal
+Reposition DevClip from an *AI code formatter and explainer* to a **developer-focused AI code memory assistant** — a browser-first SaaS that saves, recalls, and improves every snippet developers interact with.  
+This pivot builds on the current architecture and aligns with 2025–2026 market trends favoring *context persistence, workflow continuity, and lightweight automation tools*.
+
+---
+
+## 🧩 Core Concept
+> **DevClip — The Code Memory You Wish You Had.**  
+> Format, recall, and improve any snippet you’ve ever copied.
+
+**Mission:**  
+Give developers superhuman memory — a searchable, privacy-first, AI-enhanced clipboard that learns from every code interaction.
+
+---
+
+## ⚙️ Product Evolution (Key Functional Changes)
+
+| Area | Current | New / Enhanced | Rationale |
+|------|----------|----------------|------------|
+| **Formatter Core** | Local Prettier-based formatters (13 langs) | Keep as gateway feature | Fastest onboarding; free viral hook |
+| **AI Tools** | Explain / Refactor / Summarize | Replace with **AI Recall + Smart Insights** | Moves from generic AI to contextual intelligence |
+| **Clipboard Sync** | Cloud sync with history | Expand into **Code Memory Layer** | Persistent snippet storage with AI tagging/search |
+| **Search** | None | Add `/v1/memory/search` (semantic search) | Enables recall by context (“find my last regex snippet”) |
+| **Team Features** | Shared credits | **Team Knowledge Base** (shared memory + insights) | Stickier B2B adoption; unique team value |
+| **Pricing Model** | Credit-based AI calls | **Feature-tiered subscriptions** | Simpler perception; stronger conversion leverage |
+
+---
+
+## 💰 New Subscription Model
+
+| Plan | Price | Features | Target |
+|------|--------|-----------|--------|
+| **Free** | $0 | Local formatters, 7-day snippet history, limited search | Indie devs, testers |
+| **Pro** | $9.99/mo | Full code memory, AI semantic search, sync across devices, snippet tagging | Freelancers, professionals |
+| **Team** | $29.99/mo | Shared snippet memory, AI summary reports, usage analytics, API integrations | Small engineering teams |
+
+**Add-on:** VS Code + API integration for $5/mo (optional expansion path).
+
+---
+
+## 🧠 Core Features (New Positioning)
+1. **Code Memory Layer**
+   - Automatically saves copied or formatted snippets.
+   - Tag, search, and recall across all devices.
+   - Private by default; end-to-end encrypted storage.
+
+2. **AI Semantic Search**
+   - Ask “show my last JWT examples” or “find regex for email validation.”
+   - Powered by OpenAI embeddings with local caching for speed.
+
+3. **Smart Paste & Formatter**
+   - Detect language and format instantly on paste.
+   - Offer auto-fix suggestions for syntax and style.
+
+4. **Team Knowledge Hub**
+   - Shared code snippets + AI-generated documentation.
+   - Weekly “insight summaries” (most reused code, key patterns).
+
+5. **Integration-Ready REST API**
+   - `/v1/memory/search`, `/v1/memory/save`, `/v1/format`
+   - Token auth, JSON I/O, perfect for agents, pipelines, or CI/CD.
+
+---
+
+## 📊 Market Weights (Product-Market Fit Alignment)
+
+| Market Trend | Weight | DevClip Advantage |
+|---------------|--------|--------------------|
+| **AI fatigue** (too many chatbots) | High | Shifts from conversation → memory. Persistent utility. |
+| **Developer automation** | Very High | Browser-native + API = low-friction automation. |
+| **Code knowledge reuse** | High | Solves continuity gap that Copilot/Cursor ignore. |
+| **Privacy-conscious devs** | Medium | Local formatting + opt-in sync. |
+| **Team collaboration tools** | High | Shared snippet memory = B2B stickiness. |
+
+---
+
+## 🔍 Competitive Landscape & Differentiation
+
+| Competitor | Focus | Weakness | DevClip Edge |
+|-------------|--------|-----------|---------------|
+| **ChatGPT / Copilot Chat** | Inline code help | No long-term memory | Persistent snippet recall |
+| **Pieces.app** | Code memory | Heavy desktop footprint | Lightweight, browser-native |
+| **Raycast AI** | Mac-only productivity | OS lock-in | Cross-platform (web, extension, API) |
+| **Notion AI / Obsidian** | Knowledge management | Non-dev focus | Code-native + AI-driven search |
+
+---
+
+## 🚀 Launch Strategy (Streamlined)
+
+1. **Rebrand messaging:**  
+   “Your AI Code Memory — format, recall, and improve everything you copy.”
+
+2. **Feature rollout (2 sprints):**  
+   - Sprint 1: snippet persistence + semantic search (OpenAI embeddings).  
+   - Sprint 2: AI tagging + team shared memory view.
+
+3. **Market entry:**  
+   - Launch with tagline *“ChatGPT forgot, DevClip remembers.”*  
+   - Target **developers, indie hackers, small teams** via Product Hunt + X/Reddit.  
+   - Emphasize **speed, privacy, memory, and continuity**.
+
+---
+
+## 🧠 Summary
+
+DevClip evolves from a “formatter + AI assistant” into a **developer’s memory engine** — lightweight, privacy-first, and integrated with existing workflows.
+
+**Why this wins:**
+- Moves beyond saturated AI explanation tools.
+- Aligns with high-demand market (contextual memory + AI search).  
+- Retains your existing stack and users.  
+- Creates stronger retention, higher LTV, and clearer value.
+
+> **New Tagline:** “DevClip — Your AI Code Memory. Format, recall, and improve everything you copy.”
