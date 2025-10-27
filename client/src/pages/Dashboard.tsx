@@ -30,6 +30,7 @@ import {
   HardDrive,
   BarChart3,
   Shield,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -155,7 +156,7 @@ export default function Dashboard() {
   // Feedback mutation (authenticated)
   const feedbackMutation = useMutation({
     mutationFn: async ({ rating, message }: { rating: number; message: string }) => {
-      const res = await apiRequest("/api/feedback", "POST", { rating, message, userId: user?.id });
+      const res = await apiRequest("/api/feedback", "POST", { rating, message, userId: (user as any)?.id });
       return res.json();
     },
   });
@@ -312,7 +313,7 @@ export default function Dashboard() {
               <h1 className="text-xl font-bold" data-testid="text-app-title">DevClip</h1>
             </div>
             {isAuthenticated && user && (
-              <PlanBadge plan={user.plan as "free" | "pro" | "team"} />
+              <PlanBadge plan={(user as any).plan as "free" | "pro" | "team"} />
             )}
             {/* Mode indicator */}
             <Badge 
@@ -335,7 +336,7 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isAuthenticated && user?.isAdmin && (
+            {isAuthenticated && (user as any)?.isAdmin && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -346,6 +347,15 @@ export default function Dashboard() {
                 Admin
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/api/download/extension'}
+              data-testid="button-download-extension"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Extension
+            </Button>
             {isAuthenticated ? (
               <Button
                 variant="ghost"
@@ -374,7 +384,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="history" className="space-y-6">
-          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-5' : 'grid-cols-2'} max-w-3xl mx-auto`}>
+          <TabsList className={`grid w-full ${isAuthenticated ? 'grid-cols-6' : 'grid-cols-2'} max-w-4xl mx-auto`}>
             <TabsTrigger value="history" data-testid="tab-history">
               <History className="h-4 w-4 mr-2" />
               History
@@ -385,6 +395,10 @@ export default function Dashboard() {
             </TabsTrigger>
             {isAuthenticated && (
               <>
+                <TabsTrigger value="ai-tools" data-testid="tab-ai-tools">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI Tools
+                </TabsTrigger>
                 <TabsTrigger value="analytics" data-testid="tab-analytics">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analytics
@@ -420,15 +434,13 @@ export default function Dashboard() {
               <div className="bg-muted/50 border rounded-lg p-4 text-sm">
                 <p className="text-muted-foreground">
                   You're using DevClip in local mode. Your clipboard items are stored in your browser. 
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 ml-1"
+                  <button
+                    className="text-primary hover:underline ml-1"
                     onClick={handleSignIn}
                     data-testid="button-signin-prompt"
                   >
                     Sign in
-                  </Button>
+                  </button>
                   {" "}to sync across devices and unlock AI features.
                 </p>
               </div>
@@ -488,6 +500,26 @@ export default function Dashboard() {
             </TabsContent>
           )}
 
+          {/* AI Tools - Authenticated only */}
+          {isAuthenticated && user && (
+            <TabsContent value="ai-tools">
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }>
+                <div className="max-w-2xl mx-auto">
+                  <AiActionsPanel
+                    onAiAction={handleAiAction}
+                    plan={(user as any).plan as "free" | "pro" | "team"}
+                    credits={(user as any).aiCreditsBalance ?? 50}
+                    onUpgrade={() => setUpgradeModalOpen(true)}
+                  />
+                </div>
+              </Suspense>
+            </TabsContent>
+          )}
+
           {/* Settings - Authenticated only */}
           {isAuthenticated && user && (
             <TabsContent value="settings">
@@ -496,27 +528,20 @@ export default function Dashboard() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               }>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-6">
-                    <SettingsPanel
-                      user={{
-                        email: user.email,
-                        username: user.username,
-                        plan: user.plan as "free" | "pro" | "team",
-                        aiCredits: user.aiCreditsBalance ?? 50,
-                      }}
-                      onUpgrade={() => setUpgradeModalOpen(true)}
-                      onManageBilling={handleManageBilling}
-                    />
-                  </div>
-                  <div>
-                    <AiActionsPanel
-                      onAiAction={handleAiAction}
-                      plan={user.plan as "free" | "pro" | "team"}
-                      credits={user.aiCreditsBalance ?? 50}
-                      onUpgrade={() => setUpgradeModalOpen(true)}
-                    />
-                  </div>
+                <div className="max-w-4xl mx-auto">
+                  <SettingsPanel
+                    user={{
+                      email: (user as any).email,
+                      plan: (user as any).plan as "free" | "pro" | "team",
+                      aiCreditsBalance: (user as any).aiCreditsBalance ?? 50,
+                      aiCreditsUsed: (user as any).aiCreditsUsed,
+                      creditCarryover: (user as any).creditCarryover,
+                      firstName: (user as any).firstName,
+                      lastName: (user as any).lastName,
+                    }}
+                    onUpgrade={() => setUpgradeModalOpen(true)}
+                    onManageBilling={handleManageBilling}
+                  />
                 </div>
               </Suspense>
             </TabsContent>

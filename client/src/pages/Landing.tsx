@@ -346,7 +346,7 @@ export default function Landing() {
                 <CardTitle>Pro</CardTitle>
                 <CardDescription>For power users</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold">$10</span>
+                  <span className="text-3xl font-bold">$8.99</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
@@ -363,7 +363,7 @@ export default function Landing() {
                 <CardTitle>Team</CardTitle>
                 <CardDescription>For teams</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold">$49</span>
+                  <span className="text-3xl font-bold">$39.99</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
