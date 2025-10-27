@@ -28,13 +28,14 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 8.99,
-    annualPrice: 89,
+    monthlyPrice: 4.99,
+    annualPrice: 49.90,
     icon: Crown,
     description: "Perfect for individual developers",
     features: [
       "5,000 AI credits/month",
       "Credit carryover (up to 10,000)",
+      "Up to 6 API keys",
       "Code explanation & refactoring",
       "Log summarization",
       "Cloud clipboard sync",
@@ -46,13 +47,14 @@ const plans = [
   {
     id: "team",
     name: "Team",
-    monthlyPrice: 39.99,
-    annualPrice: 399,
+    monthlyPrice: 24.99,
+    annualPrice: 249.90,
     icon: Users,
     description: "For development teams",
     features: [
       "25,000 AI credits/month",
       "Credit carryover (up to 50,000)",
+      "Unlimited API keys",
       "Shared snippet library",
       "Team workspace",
       "Usage analytics",
@@ -143,7 +145,7 @@ export function UpgradeModal({
               className="ml-2"
               data-testid="badge-annual-savings"
             >
-              Save up to $98/year
+              Save up to $50/year
             </Badge>
           )}
         </div>

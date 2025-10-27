@@ -22,7 +22,7 @@
 
 **[0:20-0:25] CTA**  
 *Visual: Show pricing page with Free/Pro/Team plans*  
-*Voiceover:* "Start free with 50 AI credits per month. Upgrade to Pro for just $8.99."
+*Voiceover:* "Start free with 50 AI credits per month. Upgrade to Pro for just $4.99."
 
 **[0:25-0:30] Closing**  
 *Visual: Show browser extension icon and website URL*  
@@ -72,8 +72,8 @@ DevClip is a browser extension and web application that combines local code form
 **Pricing:**
 
 - **Free:** 50 AI credits/month, unlimited formatters, cloud sync
-- **Pro ($8.99/month):** 5,000 credits, credit carryover (10K max), up to 3 API keys
-- **Team ($39.99/month):** 25,000 shared credits, unlimited API keys, team management
+- **Pro ($4.99/month):** 5,000 credits, credit carryover (10K max), up to 6 API keys
+- **Team ($24.99/month):** 25,000 shared credits, unlimited API keys, team management
 
 **Technology Stack:**  
 React, TypeScript, Vite, Node.js, Express, PostgreSQL (Neon), Stripe, OpenAI API, Prettier
@@ -124,7 +124,7 @@ The AI features are 🔥
 • Select messy code → Auto-refactor for readability
 • Drop in logs → AI summarizes key errors
 
-Powered by OpenAI. Free users get 50 credits/month. Pro tier: 5,000 credits for $8.99/mo.
+Powered by OpenAI. Free users get 50 credits/month. Pro tier: 5,000 credits for $4.99/mo.
 
 **Tweet 4 (Browser Extension):**  
 Install the Chrome/Edge extension to format code from any webpage:
@@ -139,8 +139,8 @@ Download: https://devclip.xyz/extension
 Pricing that makes sense:
 
 🆓 Free: 50 AI credits, unlimited formatters
-💎 Pro: $8.99/mo, 5,000 credits, API keys
-👥 Team: $39.99/mo, 25,000 shared credits
+💎 Pro: $4.99/mo, 5,000 credits, 6 API keys
+👥 Team: $24.99/mo, 25,000 shared credits
 
 Start free, upgrade anytime. No credit card required.
 
@@ -195,8 +195,8 @@ Install the Chrome/Edge extension for one-click formatting, or integrate our API
 **💰 Pricing:**
 
 DevClip offers a generous free tier (50 AI credits/month, unlimited formatters) and affordable paid plans:
-- **Pro:** $8.99/month for 5,000 AI credits
-- **Team:** $39.99/month for 25,000 shared credits
+- **Pro:** $4.99/month for 5,000 AI credits + 6 API keys
+- **Team:** $24.99/month for 25,000 shared credits + unlimited keys
 
 **🚀 Try It Now:**
 
@@ -274,8 +274,8 @@ DevClip is a browser extension + web app that gives developers:
 I wanted DevClip to be accessible to individual developers while sustainable as a business:
 
 - **Free:** 50 AI credits/month, unlimited formatters, cloud sync
-- **Pro ($8.99/month):** 5,000 AI credits, credit carryover (max 10K), up to 3 API keys
-- **Team ($39.99/month):** 25,000 shared credits, unlimited API keys, team features
+- **Pro ($4.99/month):** 5,000 AI credits, credit carryover (max 10K), up to 6 API keys
+- **Team ($24.99/month):** 25,000 shared credits, unlimited API keys, team features
 
 All formatting is free forever. You only pay for AI features.
 

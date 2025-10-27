@@ -381,7 +381,7 @@ export default function Landing() {
                 <CardTitle>Pro</CardTitle>
                 <CardDescription>For power users</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold">$8.99</span>
+                  <span className="text-3xl font-bold">$4.99</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
@@ -396,7 +396,7 @@ export default function Landing() {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-sm">✓</span>
-                  <p className="text-sm">Up to 3 API keys</p>
+                  <p className="text-sm">Up to 6 API keys</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-sm">✓</span>
@@ -418,7 +418,7 @@ export default function Landing() {
                 <CardTitle>Team</CardTitle>
                 <CardDescription>For organizations</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold">$39.99</span>
+                  <span className="text-3xl font-bold">$24.99</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
@@ -501,7 +501,7 @@ export default function Landing() {
                   <tr className="border-b">
                     <td className="py-3 px-4">API Keys</td>
                     <td className="text-center py-3 px-4 text-muted-foreground">—</td>
-                    <td className="text-center py-3 px-4">Up to 3</td>
+                    <td className="text-center py-3 px-4">Up to 6</td>
                     <td className="text-center py-3 px-4">Unlimited</td>
                   </tr>
                   <tr className="border-b">

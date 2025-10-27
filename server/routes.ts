@@ -299,14 +299,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingKeys = await storage.getApiKeys(userId);
       const activeKeys = existingKeys.filter(k => !k.revokedAt);
       
-      // Pro tier: max 3 API keys
-      if (plan === 'pro' && activeKeys.length >= 3) {
+      // Pro tier: max 6 API keys
+      if (plan === 'pro' && activeKeys.length >= 6) {
         return res.status(403).json({ 
-          message: "Pro plan limit: 3 API keys maximum. Revoke an existing key or upgrade to Team plan.",
+          message: "Pro plan limit: 6 API keys maximum. Revoke an existing key or upgrade to Team plan.",
           upgradeRequired: true,
           plan: 'pro',
           currentCount: activeKeys.length,
-          maxAllowed: 3
+          maxAllowed: 6
         });
       }
       
