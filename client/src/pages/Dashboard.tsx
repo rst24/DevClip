@@ -239,7 +239,7 @@ export default function Dashboard() {
   // Semantic search mutation (Pro/Team only)
   const semanticSearchMutation = useMutation({
     mutationFn: async (query: string) => {
-      const res = await apiRequest("/api/v1/memory/search", "POST", { query, limit: 20 });
+      const res = await apiRequest("/api/memory/search", "POST", { query, limit: 20 });
       const data = await res.json();
       return data;
     },

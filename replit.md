@@ -39,6 +39,16 @@ DevClip is built with a React 18, TypeScript, Vite, Tailwind CSS, and shadcn/ui 
     4. Final order: Vue → TSX → JSX → JSON → TypeScript → JavaScript → HTML → GraphQL → SCSS → Less → CSS → YAML → Markdown
 - **Legacy Formatters**: JSON, YAML, SQL prettify, ANSI strip, log-to-markdown (maintained for backward compatibility).
 - **AI Operations**: Code explanation, refactoring, log summarization.
+- **Semantic Search** (NEW - October 27, 2025): AI-powered code search using OpenAI embeddings and pgvector:
+  - **Implementation Complete**: Full stack implementation with SQL pgvector queries, storage layer, API endpoints, and UI
+  - **Database**: PostgreSQL with pgvector extension, ivfflat index on embeddings column (vector(1536))
+  - **Security**: Parameterized SQL queries using `sql`` template, similarity scores normalized to 0-1 range with `GREATEST(0, LEAST(1, ...))`
+  - **Endpoints**: 
+    - `/api/memory/search` (POST) - Session-based auth for web app
+    - `/v1/memory/search` (POST) - API key auth for browser extension
+  - **Features**: Natural language search ("find JWT examples"), similarity % badges, metadata display (tags, language)
+  - **Pricing**: Pro/Team only, costs 10 tokens per search
+  - **⚠️ KNOWN LIMITATION**: Replit AI integrations do NOT support OpenAI embeddings endpoint (`POST /embeddings`). The implementation is complete and correct, but requires a real OpenAI API key (not Replit AI proxy) to function. The `generateEmbedding()` function in `server/openai.ts` will fail with "BadRequestError: 400 Endpoint not supported" until a direct OpenAI API key is configured.
 - **Analytics Dashboard**: Displays 30-day usage time series, operation breakdowns, and recent operations.
 - **Browser Extension**: Manifest V3 compliant, offering local formatters and AI tools, configurable via an options page for API keys (universal formatter pending deployment).
 

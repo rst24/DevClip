@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import archiver from "archiver";
 import path from "path";
 import { storage } from "./storage";
-import { openai, getModelForPlan, MAX_COMPLETION_TOKENS } from "./openai";
+import { openai, getModelForPlan, MAX_COMPLETION_TOKENS, generateEmbedding } from "./openai";
 import { 
   formatJson, 
   formatYaml, 
@@ -537,6 +537,65 @@ Be specific and practical. Format your response in markdown with proper code blo
     } catch (error: any) {
       console.error("Error deleting item:", error);
       res.status(500).json({ message: "Failed to delete item" });
+    }
+  });
+
+  // Semantic search (session-based auth for web app)
+  app.post("/api/memory/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { query, limit = 10 } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Query is required" });
+      }
+      
+      // Get user to check subscription tier
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Only Pro and Team users can use semantic search
+      if (user.plan === 'free') {
+        return res.status(403).json({ 
+          message: "Semantic search requires Pro or Team subscription",
+          requiresUpgrade: true 
+        });
+      }
+      
+      // Check token balance (10 tokens for semantic search)
+      const SEARCH_TOKEN_COST = 10;
+      if (user.tokenBalance < SEARCH_TOKEN_COST) {
+        return res.status(402).json({ 
+          message: "Insufficient tokens. Please upgrade or wait for next month's allocation.",
+          tokensRequired: SEARCH_TOKEN_COST,
+          tokensAvailable: user.tokenBalance
+        });
+      }
+      
+      // Generate embedding for search query
+      const queryEmbedding = await generateEmbedding(query);
+      
+      // Execute pgvector search
+      const results = await storage.searchClipboardItemsByEmbedding(
+        userId,
+        queryEmbedding,
+        Math.min(limit, 50) // Cap at 50
+      );
+      
+      // Deduct tokens
+      await storage.updateTokenBalance(userId, -SEARCH_TOKEN_COST);
+      
+      res.json({
+        query,
+        results,
+        tokensUsed: SEARCH_TOKEN_COST
+      });
+      
+    } catch (error: any) {
+      console.error("Error in semantic search:", error);
+      res.status(500).json({ message: "Search failed" });
     }
   });
 
