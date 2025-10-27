@@ -440,35 +440,18 @@ router.post("/memory/search", authenticateApiKey, async (req: ApiKeyRequest, res
       });
     }
 
-    // TODO: Replace with SQL pgvector query for better performance
-    // For now, using in-memory similarity (will upgrade to SQL in next iteration)
-    const allSnippets = await storage.getClipboardItems(user.id);
-    const snippetsWithEmbeddings = allSnippets.filter(s => s.embedding);
-
-    // Calculate similarity scores and rank results
-    const rankedResults = snippetsWithEmbeddings
-      .map(snippet => {
-        const snippetEmbedding = snippet.embedding as number[]; // Already parsed by custom type converter
-        const similarity = cosineSimilarity(queryEmbedding, snippetEmbedding);
-        
-        return {
-          id: snippet.id,
-          content: snippet.content,
-          language: snippet.language,
-          tags: snippet.tags,
-          createdAt: snippet.createdAt,
-          similarity,
-        };
-      })
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, limit);
+    // Use SQL pgvector query for efficient similarity search
+    const rankedResults = await storage.searchClipboardItemsByEmbedding(
+      user.id,
+      queryEmbedding,
+      limit
+    );
 
     return res.status(200).json({
       success: true,
       query,
       results: rankedResults,
       totalResults: rankedResults.length,
-      searchedSnippets: snippetsWithEmbeddings.length,
     });
   } catch (error) {
     console.error("[API v1 /memory/search error]", error);

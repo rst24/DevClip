@@ -43,6 +43,9 @@ export interface IStorage {
   toggleFavorite(id: string): Promise<ClipboardItem | undefined>;
   deleteClipboardItem(id: string): Promise<boolean>;
   
+  // Semantic search with pgvector
+  searchClipboardItemsByEmbedding(userId: string, queryEmbedding: number[], limit?: number): Promise<Array<ClipboardItem & { similarity: number }>>;
+  
   // AI operations
   createAiOperation(operation: InsertAiOperation): Promise<AiOperation>;
   getAiOperations(userId: string): Promise<AiOperation[]>;
@@ -291,6 +294,34 @@ export class PostgresStorage implements IStorage {
       .where(eq(clipboardItems.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  async searchClipboardItemsByEmbedding(
+    userId: string, 
+    queryEmbedding: number[], 
+    limit: number = 10
+  ): Promise<Array<ClipboardItem & { similarity: number }>> {
+    // Use pgvector SQL query with cosine distance operator (<=>)
+    // Cosine distance: 0 = identical, 2 = opposite
+    // Convert to similarity and normalize to 0-1 range
+    const { sql } = await import('drizzle-orm');
+    
+    // Format embedding as pgvector array string (validated numeric array)
+    const embeddingVector = `[${queryEmbedding.join(',')}]`;
+    
+    // Use parameterized query to prevent SQL injection
+    const results = await db.execute(sql`
+      SELECT 
+        id, user_id, content, content_type, formatted, favorite,
+        language, tags, embedding, is_shared, team_id, created_at,
+        GREATEST(0, LEAST(1, 1 - (embedding <=> ${embeddingVector}::vector))) AS similarity
+      FROM clipboard_items
+      WHERE user_id = ${userId} AND embedding IS NOT NULL
+      ORDER BY embedding <=> ${embeddingVector}::vector
+      LIMIT ${limit}
+    `);
+    
+    return results.rows as Array<ClipboardItem & { similarity: number }>;
   }
 
   // AI operations

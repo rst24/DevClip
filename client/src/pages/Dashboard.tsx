@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [localItems, setLocalItems] = useState<LocalClipboardItem[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
   const { toast} = useToast();
   const { user, isLoading: authLoading, isAuthenticated} = useAuth();
@@ -232,6 +233,34 @@ export default function Dashboard() {
     mutationFn: async ({ rating, message }: { rating: number; message: string }) => {
       const res = await apiRequest("/api/feedback", "POST", { rating, message, userId: (user as any)?.id });
       return res.json();
+    },
+  });
+
+  // Semantic search mutation (Pro/Team only)
+  const semanticSearchMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const res = await apiRequest("/api/v1/memory/search", "POST", { query, limit: 20 });
+      const data = await res.json();
+      return data;
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("Feature Not Available")) {
+        toast({
+          title: "Upgrade Required",
+          description: "Semantic search is available on Pro ($9.99/mo) and Team ($29.99/mo) plans",
+          action: (
+            <Button size="sm" onClick={() => setUpgradeModalOpen(true)} data-testid="button-upgrade-search">
+              Upgrade
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: "Search failed",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -566,11 +595,90 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">Your saved code snippets with AI-powered tagging</p>
                   </div>
                   <Badge variant="secondary" data-testid="badge-memory-count">
-                    {clipboardItems.length} snippets
+                    {semanticSearchMutation.data ? semanticSearchMutation.data.results.length : clipboardItems.length} snippets
                   </Badge>
                 </div>
 
-                {historyLoading ? (
+                {/* Semantic Search UI (Pro/Team only) */}
+                {((user as any).plan === "pro" || (user as any).plan === "team") && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search with AI... (e.g., 'JWT authentication examples')"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchQuery.trim()) {
+                          semanticSearchMutation.mutate(searchQuery);
+                        }
+                      }}
+                      disabled={semanticSearchMutation.isPending}
+                      data-testid="input-semantic-search"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (searchQuery.trim()) {
+                          semanticSearchMutation.mutate(searchQuery);
+                        }
+                      }}
+                      disabled={!searchQuery.trim() || semanticSearchMutation.isPending}
+                      data-testid="button-search"
+                    >
+                      {semanticSearchMutation.isPending ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Searching...</>
+                      ) : (
+                        <><Sparkles className="h-4 w-4 mr-2" /> Search</>
+                      )}
+                    </Button>
+                    {semanticSearchMutation.data && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSearchQuery("");
+                          semanticSearchMutation.reset();
+                        }}
+                        data-testid="button-clear-search"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {semanticSearchMutation.isPending ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-3 text-muted-foreground">Searching your code memory...</p>
+                  </div>
+                ) : semanticSearchMutation.data ? (
+                  <div className="space-y-3">
+                    {semanticSearchMutation.data.results.length === 0 ? (
+                      <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                        <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No matches found</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Try a different search query or clear to see all snippets
+                        </p>
+                      </div>
+                    ) : (
+                      semanticSearchMutation.data.results.map((result: any) => (
+                        <div key={result.id} className="relative">
+                          <Badge
+                            variant="secondary"
+                            className="absolute top-2 right-2 z-10"
+                            data-testid={`badge-similarity-${result.id}`}
+                          >
+                            {Math.round(result.similarity * 100)}% match
+                          </Badge>
+                          <ClipboardCard
+                            item={result}
+                            onCopy={handleCopyToClipboard}
+                            onToggleFavorite={handleToggleFavorite}
+                          />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : historyLoading ? (
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="border rounded-lg p-4">

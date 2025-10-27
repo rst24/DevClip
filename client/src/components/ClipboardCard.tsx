@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Star, Code2, FileJson, Database, FileCode, FileText, ScrollText, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Star, Code2, FileJson, Database, FileCode, FileText, ScrollText, Check, Users } from "lucide-react";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import type { ClipboardItem } from "@shared/schema";
@@ -62,17 +63,53 @@ export function ClipboardCard({ item, onCopy, onToggleFavorite }: ClipboardCardP
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {item.contentType}
-            </span>
-            {item.formatted && (
-              <span className="text-xs text-primary">Formatted</span>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            {/* Language badge (new memory metadata) */}
+            {item.language && (
+              <Badge variant="outline" className="text-xs" data-testid={`badge-language-${item.id}`}>
+                {item.language}
+              </Badge>
             )}
+            
+            {/* Content type (fallback if no language) */}
+            {!item.language && (
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {item.contentType}
+              </span>
+            )}
+            
+            {item.formatted && (
+              <Badge variant="secondary" className="text-xs">Formatted</Badge>
+            )}
+            
+            {/* Shared status indicator */}
+            {item.isShared && (
+              <Badge variant="secondary" className="text-xs gap-1" data-testid={`badge-shared-${item.id}`}>
+                <Users className="h-3 w-3" />
+                Shared
+              </Badge>
+            )}
+            
             <span className="text-xs text-muted-foreground ml-auto">
               {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
             </span>
           </div>
+          
+          {/* Tags (new memory metadata) */}
+          {item.tags && item.tags.length > 0 && (
+            <div className="flex items-center gap-1 mb-2 flex-wrap">
+              {item.tags.map((tag, idx) => (
+                <Badge 
+                  key={idx} 
+                  variant="default" 
+                  className="text-xs"
+                  data-testid={`badge-tag-${item.id}-${idx}`}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
           
           <pre className={cn(
             "font-mono text-xs whitespace-pre-wrap break-words",
