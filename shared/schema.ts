@@ -86,6 +86,56 @@ export type InsertClipboardItemRequest = z.infer<typeof insertClipboardItemSchem
 export type InsertClipboardItem = typeof clipboardItems.$inferInsert;
 export type ClipboardItem = typeof clipboardItems.$inferSelect;
 
+// Snippet tags for organizing and discovering code memories
+export const snippetTags = pgTable(
+  "snippet_tags",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    tag: text("tag").notNull().unique(), // Unique tag name (e.g., "authentication", "api", "jwt")
+    usageCount: integer("usage_count").notNull().default(1), // How many snippets use this tag
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_snippet_tags_usage_count").on(table.usageCount),
+  ],
+);
+
+export const insertSnippetTagSchema = createInsertSchema(snippetTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSnippetTag = typeof snippetTags.$inferInsert;
+export type SnippetTag = typeof snippetTags.$inferSelect;
+
+// Team insights for weekly AI-generated reports
+export const teamInsights = pgTable(
+  "team_insights",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    teamId: varchar("team_id").notNull(),
+    weekStart: timestamp("week_start").notNull(), // Start of the week for this report
+    summary: text("summary").notNull(), // AI-generated summary of team activity
+    topSnippets: jsonb("top_snippets"), // Most-used snippets with usage counts
+    patterns: jsonb("patterns"), // Detected coding patterns and trends
+    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_team_insights_team_id").on(table.teamId),
+    index("idx_team_insights_week_start").on(table.weekStart),
+  ],
+);
+
+export const insertTeamInsightSchema = createInsertSchema(teamInsights).omit({
+  id: true,
+  createdAt: true,
+  generatedAt: true,
+});
+
+export type InsertTeamInsight = typeof teamInsights.$inferInsert;
+export type TeamInsight = typeof teamInsights.$inferSelect;
+
 // AI operation requests for tracking usage with token costs
 export const aiOperations = pgTable(
   "ai_operations",
