@@ -207,13 +207,15 @@
         <div class="card-text">
           To use AI-powered features, you need an API key from the DevClip web app.
           <br><br>
-          1. Go to the <a href="http://localhost:5000" target="_blank" class="link">DevClip Dashboard</a>
+          1. Go to the <a href="https://devclip.xyz" target="_blank" class="link" id="dashboardLink">DevClip Dashboard</a>
           <br>
-          2. Navigate to Settings → API Keys
+          2. Login with Google, GitHub, Apple, or X
           <br>
-          3. Generate a new API key
+          3. Navigate to Settings → API Keys tab
           <br>
-          4. Copy and paste it below
+          4. Click "Generate Key" and copy it
+          <br>
+          5. Paste the key below and click Save
         </div>
       </div>
       
@@ -235,14 +237,12 @@
       
       <div class="form-group">
         <label for="apiBaseUrl">API Base URL</label>
-        <input 
-          type="text" 
-          id="apiBaseUrl" 
-          value="http://localhost:5000/api/v1"
-          placeholder="http://localhost:5000/api/v1"
-        >
+        <select id="apiBaseUrl" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          <option value="https://devclip.xyz/api/v1">Production (devclip.xyz)</option>
+          <option value="http://localhost:5000/api/v1">Local Development</option>
+        </select>
         <div class="help-text">
-          Leave as default unless you're using a custom DevClip instance
+          Choose Production for deployed app, Local for development
         </div>
       </div>
       
@@ -257,9 +257,9 @@
       <h2 class="section-title">Quick Links</h2>
       <div class="card">
         <div class="card-text">
-          <a href="http://localhost:5000" target="_blank" class="link">Dashboard</a> • 
-          <a href="http://localhost:5000/docs" target="_blank" class="link">API Documentation</a> • 
-          <a href="http://localhost:5000/?tab=settings" target="_blank" class="link">Manage Subscription</a>
+          <a href="https://devclip.xyz" target="_blank" class="link" id="dashboardLinkFooter">Dashboard</a> • 
+          <a href="https://devclip.xyz/?tab=settings" target="_blank" class="link" id="subscriptionLink">Manage Subscription</a> • 
+          <a href="mailto:support@devclip.xyz" class="link">Support</a>
         </div>
       </div>
     </div>
@@ -270,8 +270,11 @@
         <div class="card-text">
           DevClip Browser Extension v1.0.0
           <br><br>
-          Local text formatting (JSON, YAML, SQL) is free and works offline.
-          AI features require an API key and consume credits based on your plan.
+          <strong>Universal Formatter:</strong> Auto-detects 13 languages, works offline (free)
+          <br>
+          <strong>AI Features:</strong> Require API key, consume credits (Free: 50/mo, Pro: 5,000/mo, Team: 25,000/mo)
+          <br><br>
+          <strong>Need more credits?</strong> Upgrade to Pro ($8.99/mo) or Team ($39.99/mo) at <a href="https://devclip.xyz" class="link" target="_blank">devclip.xyz</a>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 // Background service worker for DevClip extension
 // Handles AI requests to the DevClip API
 
-const API_BASE_URL = 'http://localhost:5000/api/v1';
+const API_BASE_URL = 'https://devclip.xyz/api/v1'; // Default to production
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

@@ -1,13 +1,84 @@
+// ========== INITIALIZATION ==========
+let apiKey = null;
+let apiBaseUrl = null;
+let userData = null;
+
+//Initialize popup
+async function init() {
+  // Load settings
+  const data = await chrome.storage.sync.get(['apiKey', 'apiBaseUrl']);
+  apiKey = data.apiKey;
+  apiBaseUrl = data.apiBaseUrl || 'https://devclip.xyz/api/v1'; // Default to production
+  
+  // Show setup banner or account info
+  if (apiKey) {
+    await loadUserData();
+  } else {
+    showSetupBanner();
+  }
+}
+
+// Load user data from API
+async function loadUserData() {
+  try {
+    const baseUrl = apiBaseUrl.replace('/api/v1', '');
+    const response = await fetch(`${baseUrl}/api/auth/user`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      },
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      userData = await response.json();
+      showAccountBar();
+    } else {
+      showSetupBanner();
+    }
+  } catch (error) {
+    console.error('Failed to load user data:', error);
+    showSetupBanner();
+  }
+}
+
+// Show setup banner
+function showSetupBanner() {
+  document.getElementById('setupBanner').style.display = 'block';
+  document.getElementById('accountBar').style.display = 'none';
+}
+
+// Show account bar
+function showAccountBar() {
+  if (!userData) return;
+  
+  const bar = document.getElementById('accountBar');
+  const planBadge = document.getElementById('planBadge');
+  const creditsInfo = document.getElementById('creditsInfo');
+  
+  // Plan badge
+  planBadge.textContent = userData.plan.toUpperCase();
+  planBadge.className = `plan-badge plan-${userData.plan}`;
+  
+  // Credits info
+  const creditsUsed = userData.aiCreditsUsed || 0;
+  const creditsTotal = userData.aiCreditsBalance + creditsUsed;
+  const creditsRemaining = userData.aiCreditsBalance;
+  creditsInfo.textContent = `${creditsRemaining}/${creditsTotal} credits`;
+  
+  bar.style.display = 'flex';
+  document.getElementById('setupBanner').style.display = 'none';
+}
+
+// ========== EVENT LISTENERS ==========
+
 // Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     const tabName = tab.dataset.tab;
     
-    // Update tab buttons
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     
-    // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
       content.classList.remove('active');
     });
@@ -15,156 +86,252 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// Settings button
+// Settings buttons
 document.getElementById('settingsBtn').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
-// ========== FORMAT TAB ==========
+document.getElementById('openSettingsFromBanner')?.addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+});
+
+// ========== UNIVERSAL FORMAT TAB ==========
 const inputText = document.getElementById('inputText');
 const formatResult = document.getElementById('formatResult');
+const languageBadge = document.getElementById('detectedLanguage');
 
 // Read from clipboard
 document.getElementById('readClipboard').addEventListener('click', async () => {
   try {
     const text = await navigator.clipboard.readText();
     inputText.value = text;
-    showResult('formatResult', 'Clipboard text loaded', 'success');
+    detectLanguage(text);
+    showResult('formatResult', 'Clipboard text loaded! Click Auto-Format to beautify.', 'success');
   } catch (error) {
     showResult('formatResult', `Error reading clipboard: ${error.message}`, 'error');
   }
 });
 
-// Format JSON
-document.getElementById('formatJson').addEventListener('click', () => {
+// Auto-format
+document.getElementById('autoFormat').addEventListener('click', async () => {
   const text = inputText.value.trim();
   if (!text) {
-    showResult('formatResult', 'Please enter some text first', 'error');
+    showResult('formatResult', 'Please enter some code first', 'error');
     return;
   }
   
+  const lang = detectLanguage(text);
+  showResult('formatResult', 'Formatting...', 'info');
+  
   try {
-    const parsed = JSON.parse(text);
-    const formatted = JSON.stringify(parsed, null, 2);
+    const formatted = formatCode(text, lang);
     showResult('formatResult', formatted, 'success');
     copyToClipboard(formatted);
   } catch (error) {
-    showResult('formatResult', `JSON parsing error: ${error.message}`, 'error');
+    showResult('formatResult', `Formatting error: ${error.message}`, 'error');
   }
 });
 
-// Format YAML (basic conversion from JSON)
-document.getElementById('formatYaml').addEventListener('click', () => {
-  const text = inputText.value.trim();
-  if (!text) {
-    showResult('formatResult', 'Please enter some text first', 'error');
-    return;
-  }
-  
-  try {
-    // Try to parse as JSON first
-    const parsed = JSON.parse(text);
-    const yaml = jsonToYaml(parsed);
-    showResult('formatResult', yaml, 'success');
-    copyToClipboard(yaml);
-  } catch (error) {
-    showResult('formatResult', `YAML conversion error: ${error.message}`, 'error');
+// Copy result
+document.getElementById('copyResult').addEventListener('click', () => {
+  const result = formatResult.textContent;
+  if (result && formatResult.style.display !== 'none') {
+    copyToClipboard(result);
+    showResult('formatResult', result, 'success');
   }
 });
 
-// Format SQL (basic beautification)
-document.getElementById('formatSql').addEventListener('click', () => {
-  const text = inputText.value.trim();
-  if (!text) {
-    showResult('formatResult', 'Please enter some text first', 'error');
-    return;
+// Detect language
+function detectLanguage(code) {
+  const trimmed = code.trim();
+  
+  // Vue (check before HTML due to template tags)
+  if (trimmed.includes('<template>') && trimmed.includes('</template>')) {
+    showLanguageBadge('Vue');
+    return 'vue';
   }
   
-  const formatted = formatSql(text);
-  showResult('formatResult', formatted, 'success');
-  copyToClipboard(formatted);
-});
+  // TSX (TypeScript + JSX)
+  if ((trimmed.includes('interface ') || trimmed.includes(': React.')) && 
+      (trimmed.includes('</') || trimmed.includes('/>'))) {
+    showLanguageBadge('TSX');
+    return 'tsx';
+  }
+  
+  // JSX (JavaScript + JSX)
+  if ((trimmed.includes('</') || trimmed.includes('/>')) && 
+      (trimmed.includes('function ') || trimmed.includes('const ') || trimmed.includes('=>'))) {
+    showLanguageBadge('JSX');
+    return 'jsx';
+  }
+  
+  // JSON (check before JS because JSON is valid JS)
+  if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && 
+      !trimmed.includes('function') && !trimmed.includes('=>')) {
+    try {
+      JSON.parse(trimmed);
+      showLanguageBadge('JSON');
+      return 'json';
+    } catch (e) {
+      // Not JSON, continue checking
+    }
+  }
+  
+  // TypeScript
+  if (trimmed.includes('interface ') || trimmed.includes(': string') || 
+      trimmed.includes(': number') || trimmed.includes('type ')) {
+    showLanguageBadge('TypeScript');
+    return 'typescript';
+  }
+  
+  // JavaScript
+  if (trimmed.includes('function ') || trimmed.includes('=>') || 
+      trimmed.includes('const ') || trimmed.includes('let ')) {
+    showLanguageBadge('JavaScript');
+    return 'javascript';
+  }
+  
+  // HTML
+  if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html') || 
+      (trimmed.includes('<') && trimmed.includes('>'))) {
+    showLanguageBadge('HTML');
+    return 'html';
+  }
+  
+  // GraphQL
+  if (trimmed.includes('query ') || trimmed.includes('mutation ') || 
+      trimmed.includes('subscription ') || trimmed.includes('fragment ')) {
+    showLanguageBadge('GraphQL');
+    return 'graphql';
+  }
+  
+  // SCSS
+  if (trimmed.includes('$') && (trimmed.includes('{') || trimmed.includes(':'))) {
+    showLanguageBadge('SCSS');
+    return 'scss';
+  }
+  
+  // Less
+  if (trimmed.includes('@') && trimmed.includes('{') && trimmed.includes(':')) {
+    showLanguageBadge('Less');
+    return 'less';
+  }
+  
+  // CSS
+  if (trimmed.includes('{') && trimmed.includes(':') && trimmed.includes(';')) {
+    showLanguageBadge('CSS');
+    return 'css';
+  }
+  
+  // YAML
+  if (trimmed.includes(':') && !trimmed.includes('{') && 
+      (trimmed.includes('\n') || trimmed.includes('  '))) {
+    showLanguageBadge('YAML');
+    return 'yaml';
+  }
+  
+  // Markdown
+  if (trimmed.includes('#') || trimmed.includes('```') || 
+      trimmed.includes('- ') || trimmed.includes('* ')) {
+    showLanguageBadge('Markdown');
+    return 'markdown';
+  }
+  
+  // Default to text
+  showLanguageBadge('Plain Text');
+  return 'text';
+}
 
-// Strip ANSI codes
-document.getElementById('stripAnsi').addEventListener('click', () => {
-  const text = inputText.value.trim();
-  if (!text) {
-    showResult('formatResult', 'Please enter some text first', 'error');
-    return;
-  }
-  
-  const stripped = text.replace(/\x1b\[[0-9;]*m/g, '');
-  showResult('formatResult', stripped, 'success');
-  copyToClipboard(stripped);
-});
+// Show language badge
+function showLanguageBadge(lang) {
+  languageBadge.textContent = `📝 Detected: ${lang}`;
+  languageBadge.style.display = 'inline-flex';
+}
 
-// Log to Markdown
-document.getElementById('logToMarkdown').addEventListener('click', () => {
-  const text = inputText.value.trim();
-  if (!text) {
-    showResult('formatResult', 'Please enter some text first', 'error');
-    return;
+// Format code
+function formatCode(code, lang) {
+  switch (lang) {
+    case 'json':
+      return JSON.stringify(JSON.parse(code), null, 2);
+    
+    case 'yaml':
+      // Basic YAML formatting
+      return code.trim();
+    
+    case 'javascript':
+    case 'typescript':
+    case 'jsx':
+    case 'tsx':
+      // Basic JS/TS formatting
+      return beautifyJS(code);
+    
+    case 'html':
+      return beautifyHTML(code);
+    
+    case 'css':
+    case 'scss':
+    case 'less':
+      return beautifyCSS(code);
+    
+    default:
+      return code;
   }
-  
-  const markdown = logToMarkdown(text);
-  showResult('formatResult', markdown, 'success');
-  copyToClipboard(markdown);
-});
+}
+
+// Basic JS beautifier
+function beautifyJS(code) {
+  let formatted = code;
+  // Add newlines after semicolons
+  formatted = formatted.replace(/;(?!\n)/g, ';\n');
+  // Add newlines after braces
+  formatted = formatted.replace(/\{(?!\n)/g, '{\n');
+  formatted = formatted.replace(/\}(?!\n)/g, '}\n');
+  return formatted.trim();
+}
+
+// Basic HTML beautifier
+function beautifyHTML(html) {
+  let formatted = html;
+  formatted = formatted.replace(/></g, '>\n<');
+  return formatted.trim();
+}
+
+// Basic CSS beautifier
+function beautifyCSS(css) {
+  let formatted = css;
+  formatted = formatted.replace(/\{/g, ' {\n  ');
+  formatted = formatted.replace(/;/g, ';\n  ');
+  formatted = formatted.replace(/\}/g, '\n}\n');
+  return formatted.trim();
+}
 
 // ========== AI TAB ==========
 const aiInputText = document.getElementById('aiInputText');
 const aiResult = document.getElementById('aiResult');
 
-// Check if API key is configured
-async function checkApiKey() {
-  const data = await chrome.storage.sync.get(['apiKey']);
-  return data.apiKey;
-}
-
 // AI Explain
 document.getElementById('explainCode').addEventListener('click', async () => {
-  const text = aiInputText.value.trim();
-  if (!text) {
-    showResult('aiResult', 'Please enter some code first', 'error');
-    return;
-  }
-  
-  const apiKey = await checkApiKey();
-  if (!apiKey) {
-    showResult('aiResult', 'No API key configured. Go to Settings to add your key.', 'error');
-    return;
-  }
-  
-  showResult('aiResult', 'Processing...', 'info');
-  
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: 'aiRequest',
-      operation: 'explain',
-      text: text
-    });
-    
-    if (response.error) {
-      showResult('aiResult', `Error: ${response.error}`, 'error');
-    } else {
-      showResult('aiResult', response.result, 'success');
-    }
-  } catch (error) {
-    showResult('aiResult', `Error: ${error.message}`, 'error');
-  }
+  await handleAiRequest('explain', aiInputText.value.trim());
 });
 
 // AI Refactor
 document.getElementById('refactorCode').addEventListener('click', async () => {
-  const text = aiInputText.value.trim();
+  await handleAiRequest('refactor', aiInputText.value.trim());
+});
+
+// AI Summarize
+document.getElementById('summarizeLogs').addEventListener('click', async () => {
+  await handleAiRequest('summarize', aiInputText.value.trim());
+});
+
+async function handleAiRequest(operation, text) {
   if (!text) {
-    showResult('aiResult', 'Please enter some code first', 'error');
+    showResult('aiResult', 'Please enter some code or text first', 'error');
     return;
   }
   
-  const apiKey = await checkApiKey();
   if (!apiKey) {
-    showResult('aiResult', 'No API key configured. Go to Settings to add your key.', 'error');
+    showResult('aiResult', 'No API key configured. Click ⚙️ Settings to add your key.', 'error');
     return;
   }
   
@@ -173,8 +340,8 @@ document.getElementById('refactorCode').addEventListener('click', async () => {
   try {
     const response = await chrome.runtime.sendMessage({
       action: 'aiRequest',
-      operation: 'refactor',
-      text: text
+      operation,
+      text
     });
     
     if (response.error) {
@@ -183,43 +350,13 @@ document.getElementById('refactorCode').addEventListener('click', async () => {
       showResult('aiResult', response.result, 'success');
       copyToClipboard(response.result);
     }
-  } catch (error) {
-    showResult('aiResult', `Error: ${error.message}`, 'error');
-  }
-});
-
-// AI Summarize
-document.getElementById('summarizeLogs').addEventListener('click', async () => {
-  const text = aiInputText.value.trim();
-  if (!text) {
-    showResult('aiResult', 'Please enter some text first', 'error');
-    return;
-  }
-  
-  const apiKey = await checkApiKey();
-  if (!apiKey) {
-    showResult('aiResult', 'No API key configured. Go to Settings to add your key.', 'error');
-    return;
-  }
-  
-  showResult('aiResult', 'Processing...', 'info');
-  
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: 'aiRequest',
-      operation: 'summarize',
-      text: text
-    });
     
-    if (response.error) {
-      showResult('aiResult', `Error: ${response.error}`, 'error');
-    } else {
-      showResult('aiResult', response.result, 'success');
-    }
+    // ALWAYS reload user data after AI request to update credits
+    await loadUserData();
   } catch (error) {
     showResult('aiResult', `Error: ${error.message}`, 'error');
   }
-});
+}
 
 // ========== HELPER FUNCTIONS ==========
 function showResult(elementId, text, type = '') {
@@ -235,55 +372,5 @@ function copyToClipboard(text) {
   });
 }
 
-// Simple JSON to YAML converter
-function jsonToYaml(obj, indent = 0) {
-  const spaces = '  '.repeat(indent);
-  let yaml = '';
-  
-  if (Array.isArray(obj)) {
-    obj.forEach(item => {
-      yaml += `${spaces}- `;
-      if (typeof item === 'object' && item !== null) {
-        yaml += '\n' + jsonToYaml(item, indent + 1);
-      } else {
-        yaml += `${item}\n`;
-      }
-    });
-  } else if (typeof obj === 'object' && obj !== null) {
-    Object.entries(obj).forEach(([key, value]) => {
-      if (typeof value === 'object' && value !== null) {
-        yaml += `${spaces}${key}:\n${jsonToYaml(value, indent + 1)}`;
-      } else {
-        yaml += `${spaces}${key}: ${value}\n`;
-      }
-    });
-  }
-  
-  return yaml;
-}
-
-// Basic SQL formatter
-function formatSql(sql) {
-  const keywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 
-                   'INNER JOIN', 'ON', 'AND', 'OR', 'ORDER BY', 'GROUP BY', 
-                   'HAVING', 'LIMIT', 'OFFSET', 'INSERT INTO', 'VALUES', 
-                   'UPDATE', 'SET', 'DELETE FROM'];
-  
-  let formatted = sql;
-  keywords.forEach(keyword => {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-    formatted = formatted.replace(regex, `\n${keyword}`);
-  });
-  
-  return formatted.trim();
-}
-
-// Log to Markdown converter
-function logToMarkdown(log) {
-  const lines = log.split('\n');
-  let markdown = '# Log Output\n\n';
-  markdown += '```\n';
-  markdown += lines.join('\n');
-  markdown += '\n```\n';
-  return markdown;
-}
+// Initialize on load
+init();
