@@ -154,13 +154,13 @@ export function ApiKeysPanel() {
   // Get key limits based on plan
   const getKeyLimit = (plan: string | undefined) => {
     if (plan === 'team') return 'Unlimited';
-    if (plan === 'pro') return '3';
+    if (plan === 'pro') return '6';
     return '0';
   };
 
   const keyLimit = getKeyLimit(user?.plan);
   const canGenerateKeys = user?.plan === 'pro' || user?.plan === 'team';
-  const hasReachedLimit = user?.plan === 'pro' && activeKeys.length >= 3;
+  const hasReachedLimit = user?.plan === 'pro' && activeKeys.length >= 6;
   const shouldDisableGenerate = !canGenerateKeys || hasReachedLimit;
 
   return (
@@ -179,12 +179,12 @@ export function ApiKeysPanel() {
             <div>
               <p className="text-sm font-medium">
                 {user.plan === 'free' && 'API keys not available on Free plan'}
-                {user.plan === 'pro' && `API Key Limit: ${activeKeys.length} / 3`}
+                {user.plan === 'pro' && `API Key Limit: ${activeKeys.length} / 6`}
                 {user.plan === 'team' && 'API Keys: Unlimited'}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {user.plan === 'free' && 'Upgrade to Pro or Team to access API keys'}
-                {user.plan === 'pro' && 'Pro plan allows up to 3 active API keys'}
+                {user.plan === 'pro' && 'Pro plan allows up to 6 active API keys'}
                 {user.plan === 'team' && 'Team plan provides unlimited API keys'}
               </p>
             </div>
@@ -204,7 +204,7 @@ export function ApiKeysPanel() {
           <Button 
             onClick={() => {
               if (hasReachedLimit) {
-                setUpgradeMessage("Pro plan limit: 3 API keys maximum. Revoke an existing key or upgrade to Team plan.");
+                setUpgradeMessage("Pro plan limit: 6 API keys maximum. Revoke an existing key or upgrade to Team plan for unlimited keys.");
                 setShowUpgradeDialog(true);
               } else {
                 setShowGenerateDialog(true);
@@ -471,16 +471,16 @@ export function ApiKeysPanel() {
               <div className="flex items-center justify-between p-3 rounded-md border">
                 <div>
                   <p className="font-medium">Pro Plan</p>
-                  <p className="text-sm text-muted-foreground">3 API keys • 5,000 credits/month</p>
+                  <p className="text-sm text-muted-foreground">6 API keys • 5,000 credits/month</p>
                 </div>
-                <p className="font-semibold">$10/mo</p>
+                <p className="font-semibold">$4.99/mo</p>
               </div>
               <div className="flex items-center justify-between p-3 rounded-md border border-primary">
                 <div>
                   <p className="font-medium">Team Plan</p>
                   <p className="text-sm text-muted-foreground">Unlimited API keys • 25,000 credits/month</p>
                 </div>
-                <p className="font-semibold">$49/mo</p>
+                <p className="font-semibold">$24.99/mo</p>
               </div>
             </div>
           </div>
