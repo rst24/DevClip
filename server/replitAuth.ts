@@ -70,6 +70,9 @@ async function upsertUser(
   });
 }
 
+// Track registered strategies
+const registeredStrategies = new Set<string>();
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
@@ -88,39 +91,62 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  const domains = process.env.REPLIT_DOMAINS!.split(",").map(d => d.trim());
-  console.log("[Auth] Registering authentication strategies for domains:", domains);
-  
-  for (const domain of domains) {
-    const strategyName = `replitauth:${domain}`;
-    console.log(`[Auth] Registering strategy: ${strategyName}`);
+  // Helper function to register a strategy if not already registered
+  const registerStrategy = (hostname: string) => {
+    const strategyName = `replitauth:${hostname}`;
+    if (registeredStrategies.has(strategyName)) {
+      return strategyName;
+    }
     
+    console.log(`[Auth] Registering strategy: ${strategyName}`);
     const strategy = new Strategy(
       {
         name: strategyName,
         config,
         scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
+        callbackURL: `https://${hostname}/api/callback`,
       },
       verify,
     );
     passport.use(strategy);
+    registeredStrategies.add(strategyName);
+    return strategyName;
+  };
+
+  const domains = process.env.REPLIT_DOMAINS!.split(",").map(d => d.trim());
+  console.log("[Auth] Registering authentication strategies for domains:", domains);
+  
+  for (const domain of domains) {
+    registerStrategy(domain);
   }
   
   console.log("[Auth] All authentication strategies registered successfully");
+  
+  // Make registerStrategy available for dynamic registration
+  app.set('registerAuthStrategy', registerStrategy);
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", (req, res, next) => {
+  app.get("/api/login", async (req, res, next) => {
     try {
-      const strategyName = `replitauth:${req.hostname}`;
-      console.log(`[Auth] Login attempt for hostname: ${req.hostname}, using strategy: ${strategyName}`);
+      const hostname = req.hostname;
+      const registerStrategy = app.get('registerAuthStrategy');
       
-      passport.authenticate(strategyName, {
-        prompt: "login consent",
-        scope: ["openid", "email", "profile", "offline_access"],
-      })(req, res, next);
+      console.log(`[Auth] Login attempt for hostname: ${hostname}`);
+      
+      // Dynamically register strategy if it's a Replit domain
+      if (hostname.includes('replit.dev') || hostname.includes('replit.app') || hostname.includes('devclip.xyz')) {
+        const strategyName = registerStrategy(hostname);
+        console.log(`[Auth] Using strategy: ${strategyName}`);
+        
+        passport.authenticate(strategyName, {
+          prompt: "login consent",
+          scope: ["openid", "email", "profile", "offline_access"],
+        })(req, res, next);
+      } else {
+        throw new Error(`Unsupported domain: ${hostname}`);
+      }
     } catch (error: any) {
       console.error("[Auth] Error in /api/login:", error);
       res.status(500).json({ 
@@ -130,11 +156,17 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.get("/api/callback", (req, res, next) => {
+  app.get("/api/callback", async (req, res, next) => {
     try {
-      const strategyName = `replitauth:${req.hostname}`;
-      console.log(`[Auth] Callback received for hostname: ${req.hostname}, using strategy: ${strategyName}`);
+      const hostname = req.hostname;
+      const registerStrategy = app.get('registerAuthStrategy');
+      
+      console.log(`[Auth] Callback received for hostname: ${hostname}`);
       console.log(`[Auth] Callback query params:`, req.query);
+      
+      // Ensure strategy is registered for this hostname
+      const strategyName = registerStrategy(hostname);
+      console.log(`[Auth] Using strategy: ${strategyName}`);
       
       passport.authenticate(strategyName, (err: any, user: any, info: any) => {
         if (err) {
